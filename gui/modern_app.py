@@ -31,6 +31,7 @@ from utils.helpers import (
     ROOT, CONFIG_PATH, load_config, generate_unique_filename,
     is_article_url, is_profile_url
 )
+from utils.i18n import get_text
 
 MAKALELER_DIR = ROOT / "articles"
 MAKALELER_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,25 +67,55 @@ class ModernMediumScraperApp(BaseAppClass):
             raise RuntimeError("Tkinter/CustomTkinter kütüphanesi bu Python ortamında yüklü değil.")
         super().__init__()
 
-        self.title("Medium Makale İndirici & Multi-AI Editor Pro")
-        self.geometry("980x820")
-        self.minsize(900, 720)
-
         self.config_data = load_config()
+        self.current_lang = self.config_data.get("ui_language", "TR")
         self.msg_queue = queue.Queue()
         self.batch_urls = []
         self.articles_cache = {}
 
+        self.title(self.t("title"))
+        self.geometry("980x820")
+        self.minsize(900, 720)
+
         self.setup_ui()
         self.after(100, self.poll_queue)
 
+    def t(self, key: str) -> str:
+        """Helper shortcut to get localized string."""
+        return get_text(key, self.current_lang)
+
     def setup_ui(self):
+        # Top Language Bar
+        top_bar = ctk.CTkFrame(self, fg_color="transparent") if HAS_CTK else ctk.Frame(self)
+        top_bar.pack(fill="x", padx=15, pady=(10, 0))
+        top_bar.grid_columnconfigure(0, weight=1)
+
+        self.app_title_label = ctk.CTkLabel(
+            top_bar,
+            text=self.t("title"),
+            font=ctk.CTkFont(size=20, weight="bold")
+        ) if HAS_CTK else ctk.Label(top_bar, text=self.t("title"), font=("Arial", 16, "bold"))
+        self.app_title_label.grid(row=0, column=0, sticky="w")
+
+        lang_label = ctk.CTkLabel(top_bar, text="Dil / Language:", font=ctk.CTkFont(size=12)) if HAS_CTK else ctk.Label(top_bar, text="Language:")
+        lang_label.grid(row=0, column=1, padx=(10, 5), sticky="e")
+
+        self.lang_var = ctk.StringVar(value=self.current_lang)
+        self.lang_btn = ctk.CTkSegmentedButton(
+            top_bar,
+            values=["TR", "EN"],
+            variable=self.lang_var,
+            command=self.on_language_changed
+        ) if HAS_CTK else ctk.Entry(top_bar, textvariable=self.lang_var)
+        self.lang_btn.grid(row=0, column=2, sticky="e")
+
+        # Tabview
         if HAS_CTK:
             self.tabview = ctk.CTkTabview(self)
             self.tabview.pack(fill="both", expand=True, padx=15, pady=10)
 
-            self.tab_scraper = self.tabview.add("📥 Makale İndirici")
-            self.tab_ai = self.tabview.add("🤖 Multi-AI Editor & İngilizce Yeniden Yazım")
+            self.tab_scraper = self.tabview.add(self.t("tab_scraper"))
+            self.tab_ai = self.tabview.add(self.t("tab_ai"))
         else:
             self.notebook = ttk.Notebook(self)
             self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
@@ -108,28 +139,28 @@ class ModernMediumScraperApp(BaseAppClass):
         input_frame.grid(row=0, column=0, padx=15, pady=10, sticky="ew")
         input_frame.grid_columnconfigure(0, weight=1)
 
-        url_label = ctk.CTkLabel(
+        self.url_label = ctk.CTkLabel(
             input_frame,
-            text="Profil URL'si (@kullanici), Makale Linki veya RSS:",
+            text=self.t("url_label"),
             font=ctk.CTkFont(size=13)
-        ) if HAS_CTK else ctk.Label(input_frame, text="Profil/Makale URL:")
-        url_label.grid(row=0, column=0, padx=15, pady=(10, 2), sticky="w")
+        ) if HAS_CTK else ctk.Label(input_frame, text=self.t("url_label"))
+        self.url_label.grid(row=0, column=0, padx=15, pady=(10, 2), sticky="w")
 
         self.url_var = ctk.StringVar(value="https://medium.com/@welifiliz")
         self.url_entry = ctk.CTkEntry(
             input_frame,
             textvariable=self.url_var,
-            placeholder_text="https://medium.com/@kullanici veya makale URL"
+            placeholder_text=self.t("url_placeholder")
         ) if HAS_CTK else ctk.Entry(input_frame, textvariable=self.url_var)
         self.url_entry.grid(row=1, column=0, padx=15, pady=5, sticky="ew")
 
-        batch_btn = ctk.CTkButton(
+        self.batch_btn = ctk.CTkButton(
             input_frame,
-            text="Toplu Dosya Seç (.txt)",
+            text=self.t("batch_btn"),
             command=self.select_batch_file,
-            width=140
-        ) if HAS_CTK else ctk.Button(input_frame, text="Toplu Dosya Seç", command=self.select_batch_file)
-        batch_btn.grid(row=1, column=1, padx=(0, 15), pady=5)
+            width=150
+        ) if HAS_CTK else ctk.Button(input_frame, text=self.t("batch_btn"), command=self.select_batch_file)
+        self.batch_btn.grid(row=1, column=1, padx=(0, 15), pady=5)
 
         self.batch_status_label = ctk.CTkLabel(
             input_frame,
@@ -143,8 +174,8 @@ class ModernMediumScraperApp(BaseAppClass):
         settings_frame.grid(row=1, column=0, padx=15, pady=5, sticky="ew")
         settings_frame.grid_columnconfigure((1, 3), weight=1)
 
-        cat_label = ctk.CTkLabel(settings_frame, text="Kategori Klasörü:") if HAS_CTK else ctk.Label(settings_frame, text="Kategori:")
-        cat_label.grid(row=0, column=0, padx=(15, 5), pady=10, sticky="w")
+        self.cat_label = ctk.CTkLabel(settings_frame, text=self.t("category_label")) if HAS_CTK else ctk.Label(settings_frame, text=self.t("category_label"))
+        self.cat_label.grid(row=0, column=0, padx=(15, 5), pady=10, sticky="w")
 
         self.category_var = ctk.StringVar(value="genel")
         self.category_combo = ctk.CTkComboBox(
@@ -154,8 +185,8 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.category_var)
         self.category_combo.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
 
-        fmt_label = ctk.CTkLabel(settings_frame, text="Çıktı Formatı:") if HAS_CTK else ctk.Label(settings_frame, text="Format:")
-        fmt_label.grid(row=0, column=2, padx=(15, 5), pady=10, sticky="w")
+        self.fmt_label = ctk.CTkLabel(settings_frame, text=self.t("format_label")) if HAS_CTK else ctk.Label(settings_frame, text=self.t("format_label"))
+        self.fmt_label.grid(row=0, column=2, padx=(15, 5), pady=10, sticky="w")
 
         self.format_var = ctk.StringVar(value="md")
         self.format_combo = ctk.CTkOptionMenu(
@@ -168,13 +199,13 @@ class ModernMediumScraperApp(BaseAppClass):
         self.download_images_var = ctk.BooleanVar(value=self.config_data.get("download_images", False))
         self.img_switch = ctk.CTkSwitch(
             settings_frame,
-            text="Görselleri Yerel Dizine İndir (images/)",
+            text=self.t("download_imgs"),
             variable=self.download_images_var
-        ) if HAS_CTK else ctk.Checkbutton(settings_frame, text="Görselleri İndir", variable=self.download_images_var)
+        ) if HAS_CTK else ctk.Checkbutton(settings_frame, text=self.t("download_imgs"), variable=self.download_images_var)
         self.img_switch.grid(row=1, column=0, columnspan=2, padx=15, pady=(0, 10), sticky="w")
 
-        threads_label = ctk.CTkLabel(settings_frame, text="Eşzamanlı İş Parçacığı:") if HAS_CTK else ctk.Label(settings_frame, text="Threads:")
-        threads_label.grid(row=1, column=2, padx=(15, 5), pady=(0, 10), sticky="w")
+        self.threads_label = ctk.CTkLabel(settings_frame, text=self.t("threads_label")) if HAS_CTK else ctk.Label(settings_frame, text=self.t("threads_label"))
+        self.threads_label.grid(row=1, column=2, padx=(15, 5), pady=(0, 10), sticky="w")
 
         self.threads_var = ctk.StringVar(value=str(self.config_data.get("max_concurrent_threads", 5)))
         self.threads_combo = ctk.CTkOptionMenu(
@@ -190,21 +221,21 @@ class ModernMediumScraperApp(BaseAppClass):
 
         self.fetch_btn = ctk.CTkButton(
             action_frame,
-            text="Makaleleri Çek ve Kaydet",
+            text=self.t("fetch_btn"),
             font=ctk.CTkFont(size=15, weight="bold"),
             fg_color="#27ae60",
             hover_color="#219150",
             height=42,
             command=self.start_fetch
-        ) if HAS_CTK else ctk.Button(action_frame, text="Makaleleri Çek ve Kaydet", command=self.start_fetch)
+        ) if HAS_CTK else ctk.Button(action_frame, text=self.t("fetch_btn"), command=self.start_fetch)
         self.fetch_btn.grid(row=0, column=0, sticky="ew")
 
         self.open_folder_btn = ctk.CTkButton(
             action_frame,
-            text="Makaleler Klasörünü Aç",
+            text=self.t("open_folder"),
             height=42,
             command=self.open_articles_folder
-        ) if HAS_CTK else ctk.Button(action_frame, text="Klasörü Aç", command=self.open_articles_folder)
+        ) if HAS_CTK else ctk.Button(action_frame, text=self.t("open_folder"), command=self.open_articles_folder)
         self.open_folder_btn.grid(row=0, column=1, padx=(10, 0))
 
         self.progress_bar = ctk.CTkProgressBar(action_frame) if HAS_CTK else None
@@ -212,7 +243,7 @@ class ModernMediumScraperApp(BaseAppClass):
             self.progress_bar.grid(row=1, column=0, columnspan=2, pady=(10, 0), sticky="ew")
             self.progress_bar.set(0)
 
-        log_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="İndirme Günlüğü")
+        log_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("download_log"))
         log_frame.grid(row=4, column=0, padx=15, pady=(5, 15), sticky="nsew")
         log_frame.grid_columnconfigure(0, weight=1)
         log_frame.grid_rowconfigure(0, weight=1)
@@ -233,14 +264,12 @@ class ModernMediumScraperApp(BaseAppClass):
         tab.grid_columnconfigure((0, 1), weight=1)
         tab.grid_rowconfigure(2, weight=1)
 
-        # Üst Ayarlar: AI Sağlayıcı Seçimi, API Key & Model İsmi
-        top_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="AI Sağlayıcısı ve Ayarları")
+        top_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("ai_settings_title"))
         top_frame.grid(row=0, column=0, columnspan=2, padx=15, pady=10, sticky="ew")
         top_frame.grid_columnconfigure((1, 3), weight=1)
 
-        # 1. AI Servis Seçici
-        prov_label = ctk.CTkLabel(top_frame, text="AI Servisi:", font=ctk.CTkFont(weight="bold")) if HAS_CTK else ctk.Label(top_frame, text="AI Servisi:")
-        prov_label.grid(row=0, column=0, padx=(15, 5), pady=10, sticky="w")
+        self.ai_service_label = ctk.CTkLabel(top_frame, text=self.t("ai_service"), font=ctk.CTkFont(weight="bold")) if HAS_CTK else ctk.Label(top_frame, text=self.t("ai_service"))
+        self.ai_service_label.grid(row=0, column=0, padx=(15, 5), pady=10, sticky="w")
 
         selected_prov = self.config_data.get("selected_ai_provider", "DeepSeek")
         self.ai_provider_var = ctk.StringVar(value=selected_prov)
@@ -252,9 +281,8 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(top_frame, textvariable=self.ai_provider_var)
         self.ai_provider_combo.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
 
-        # 2. Model İsmi
-        model_label = ctk.CTkLabel(top_frame, text="Model İsmi:") if HAS_CTK else ctk.Label(top_frame, text="Model:")
-        model_label.grid(row=0, column=2, padx=(15, 5), pady=10, sticky="w")
+        self.model_label = ctk.CTkLabel(top_frame, text=self.t("model_label")) if HAS_CTK else ctk.Label(top_frame, text=self.t("model_label"))
+        self.model_label.grid(row=0, column=2, padx=(15, 5), pady=10, sticky="w")
 
         init_model = self.config_data.get("ai_provider_models", {}).get(selected_prov, "deepseek-chat")
         self.ai_model_var = ctk.StringVar(value=init_model)
@@ -265,9 +293,8 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(top_frame, textvariable=self.ai_model_var)
         self.ai_model_entry.grid(row=0, column=3, padx=(5, 15), pady=10, sticky="ew")
 
-        # 3. API Key
-        key_label = ctk.CTkLabel(top_frame, text="API Key:") if HAS_CTK else ctk.Label(top_frame, text="API Key:")
-        key_label.grid(row=1, column=0, padx=(15, 5), pady=(0, 10), sticky="w")
+        self.api_key_label = ctk.CTkLabel(top_frame, text=self.t("api_key")) if HAS_CTK else ctk.Label(top_frame, text=self.t("api_key"))
+        self.api_key_label.grid(row=1, column=0, padx=(15, 5), pady=(0, 10), sticky="w")
 
         init_key = self.config_data.get("ai_provider_keys", {}).get(selected_prov, "")
         self.ai_api_key_var = ctk.StringVar(value=init_key)
@@ -279,22 +306,21 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(top_frame, textvariable=self.ai_api_key_var, show="*")
         self.ai_api_key_entry.grid(row=1, column=1, columnspan=2, padx=5, pady=(0, 10), sticky="ew")
 
-        save_key_btn = ctk.CTkButton(
+        self.save_key_btn = ctk.CTkButton(
             top_frame,
-            text="Ayarları Kaydet",
+            text=self.t("save_settings"),
             width=120,
             command=self.save_ai_key_click
-        ) if HAS_CTK else ctk.Button(top_frame, text="Kaydet", command=self.save_ai_key_click)
-        save_key_btn.grid(row=1, column=3, padx=(5, 15), pady=(0, 10), sticky="ew")
+        ) if HAS_CTK else ctk.Button(top_frame, text=self.t("save_settings"), command=self.save_ai_key_click)
+        self.save_key_btn.grid(row=1, column=3, padx=(5, 15), pady=(0, 10), sticky="ew")
 
-        # Sol Panel: İndirilmiş Makale Seçici & Orijinal Metin Önizleme
-        left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="İndirilmiş Makaleler")
+        left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("downloaded_articles_title"))
         left_frame.grid(row=1, column=0, padx=(15, 5), pady=5, sticky="nsew")
         left_frame.grid_columnconfigure(1, weight=1)
         left_frame.grid_rowconfigure(2, weight=1)
 
-        cat_sel_label = ctk.CTkLabel(left_frame, text="Kategori:") if HAS_CTK else ctk.Label(left_frame, text="Kategori:")
-        cat_sel_label.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="w")
+        self.ai_cat_sel_label = ctk.CTkLabel(left_frame, text=self.t("category")) if HAS_CTK else ctk.Label(left_frame, text=self.t("category"))
+        self.ai_cat_sel_label.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="w")
 
         self.ai_category_var = ctk.StringVar(value="genel")
         self.ai_category_combo = ctk.CTkComboBox(
@@ -305,22 +331,22 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(left_frame, textvariable=self.ai_category_var)
         self.ai_category_combo.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
 
-        refresh_files_btn = ctk.CTkButton(
+        self.refresh_files_btn = ctk.CTkButton(
             left_frame,
-            text="Yenile",
+            text=self.t("refresh_btn"),
             width=70,
             command=self.refresh_ai_article_list
-        ) if HAS_CTK else ctk.Button(left_frame, text="Yenile", command=self.refresh_ai_article_list)
-        refresh_files_btn.grid(row=0, column=2, padx=(5, 10), pady=8)
+        ) if HAS_CTK else ctk.Button(left_frame, text=self.t("refresh_btn"), command=self.refresh_ai_article_list)
+        self.refresh_files_btn.grid(row=0, column=2, padx=(5, 10), pady=8)
 
-        art_sel_label = ctk.CTkLabel(left_frame, text="Makale Seç:") if HAS_CTK else ctk.Label(left_frame, text="Makale:")
-        art_sel_label.grid(row=1, column=0, padx=(10, 5), pady=(0, 8), sticky="w")
+        self.ai_art_sel_label = ctk.CTkLabel(left_frame, text=self.t("article_label")) if HAS_CTK else ctk.Label(left_frame, text=self.t("article_label"))
+        self.ai_art_sel_label.grid(row=1, column=0, padx=(10, 5), pady=(0, 8), sticky="w")
 
-        self.ai_article_var = ctk.StringVar(value="Makale seçin...")
+        self.ai_article_var = ctk.StringVar(value="Select article...")
         self.ai_article_combo = ctk.CTkOptionMenu(
             left_frame,
             variable=self.ai_article_var,
-            values=["(Makale bulunamadı)"],
+            values=["(No articles found)"],
             command=self.on_ai_article_selected
         ) if HAS_CTK else ctk.Entry(left_frame, textvariable=self.ai_article_var)
         self.ai_article_combo.grid(row=1, column=1, columnspan=2, padx=(5, 10), pady=(0, 8), sticky="ew")
@@ -333,21 +359,20 @@ class ModernMediumScraperApp(BaseAppClass):
             self.ai_orig_preview = st.ScrolledText(left_frame, wrap="word", height=15)
             self.ai_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
 
-        # Sağ Panel: AI Çalıştırma & İngilizce Çıktı Önizleme
-        right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="AI Çıktı Paneli")
+        right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("ai_output_title"))
         right_frame.grid(row=1, column=1, padx=(5, 15), pady=5, sticky="nsew")
         right_frame.grid_columnconfigure(0, weight=1)
         right_frame.grid_rowconfigure(1, weight=1)
 
         self.ai_convert_btn = ctk.CTkButton(
             right_frame,
-            text="✨ Seçili Makaleyi Seçilen AI ile Geliştir & İngilizce Yaz",
-            font=ctk.CTkFont(size=14, weight="bold"),
+            text=self.t("convert_btn"),
+            font=ctk.CTkFont(size=13, weight="bold"),
             fg_color="#8e44ad",
             hover_color="#732d91",
             height=38,
             command=self.start_ai_rewrite_single
-        ) if HAS_CTK else ctk.Button(right_frame, text="AI ile İngilizce Yaz", command=self.start_ai_rewrite_single)
+        ) if HAS_CTK else ctk.Button(right_frame, text=self.t("convert_btn"), command=self.start_ai_rewrite_single)
         self.ai_convert_btn.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
 
         if HAS_CTK:
@@ -361,7 +386,47 @@ class ModernMediumScraperApp(BaseAppClass):
         self.refresh_ai_article_list()
 
     # ---------------------------------------------------------------------------
-    # SEKMELER ARASI MANTIKSAL İŞLEVLER
+    # UYGULAMA DİL GÜNCELLEMESİ (i18n)
+    # ---------------------------------------------------------------------------
+    def on_language_changed(self, choice: str):
+        self.current_lang = choice
+        self.config_data["ui_language"] = choice
+        try:
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(self.config_data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+        self.apply_language()
+
+    def apply_language(self):
+        self.title(self.t("title"))
+        if HAS_CTK:
+            self.app_title_label.configure(text=self.t("title"))
+            # Tabs
+            self.tabview._segmented_button._buttons_dict["📥 Makale İndirici" if "📥" in self.tabview._segmented_button._buttons_dict else self.t("tab_scraper")].configure(text=self.t("tab_scraper"))
+            self.tabview._segmented_button._buttons_dict["🤖 Multi-AI Editor & İngilizce Yeniden Yazım" if "🤖" in self.tabview._segmented_button._buttons_dict else self.t("tab_ai")].configure(text=self.t("tab_ai"))
+
+        self.url_label.configure(text=self.t("url_label"))
+        self.url_entry.configure(placeholder_text=self.t("url_placeholder"))
+        self.batch_btn.configure(text=self.t("batch_btn"))
+        self.cat_label.configure(text=self.t("category_label"))
+        self.fmt_label.configure(text=self.t("format_label"))
+        self.img_switch.configure(text=self.t("download_imgs"))
+        self.threads_label.configure(text=self.t("threads_label"))
+        self.fetch_btn.configure(text=self.t("fetch_btn"))
+        self.open_folder_btn.configure(text=self.t("open_folder"))
+
+        self.ai_service_label.configure(text=self.t("ai_service"))
+        self.model_label.configure(text=self.t("model_label"))
+        self.api_key_label.configure(text=self.t("api_key"))
+        self.save_key_btn.configure(text=self.t("save_settings"))
+        self.ai_cat_sel_label.configure(text=self.t("category"))
+        self.refresh_files_btn.configure(text=self.t("refresh_btn"))
+        self.ai_art_sel_label.configure(text=self.t("article_label"))
+        self.ai_convert_btn.configure(text=self.t("convert_btn"))
+
+    # ---------------------------------------------------------------------------
+    # MANTIKSAL İŞLEVLER
     # ---------------------------------------------------------------------------
     def get_local_categories(self):
         categories = ["genel"]
@@ -372,7 +437,6 @@ class ModernMediumScraperApp(BaseAppClass):
         return sorted(list(set(categories)))
 
     def on_ai_provider_changed(self, choice):
-        """Açılır menüden yeni bir AI sağlayıcı seçildiğinde ilgili anahtar ve varsayılan modeli yükler."""
         provider = choice
         provider_keys = self.config_data.get("ai_provider_keys", {})
         provider_models = self.config_data.get("ai_provider_models", {})
@@ -406,10 +470,10 @@ class ModernMediumScraperApp(BaseAppClass):
             self.on_ai_article_selected(files[0])
         else:
             if HAS_CTK:
-                self.ai_article_combo.configure(values=["(Makale bulunamadı)"])
-            self.ai_article_var.set("(Makale bulunamadı)")
+                self.ai_article_combo.configure(values=[self.t("no_articles_cat")])
+            self.ai_article_var.set(self.t("no_articles_cat"))
             self.ai_orig_preview.delete("1.0", "end")
-            self.ai_orig_preview.insert("1.0", "Bu kategoride henüz indirilmiş makale yok.")
+            self.ai_orig_preview.insert("1.0", self.t("no_articles_cat"))
 
     def on_ai_article_selected(self, choice):
         if choice in self.articles_cache:
@@ -429,7 +493,7 @@ class ModernMediumScraperApp(BaseAppClass):
         model_val = self.ai_model_var.get().strip()
 
         if not key_val:
-            messagebox.showwarning("Uyarı", f"Lütfen {provider} için geçerli bir API Key girin.")
+            messagebox.showwarning("Uyarı", self.t("key_missing_warn").format(provider=provider))
             return
 
         self.config_data["selected_ai_provider"] = provider
@@ -444,7 +508,7 @@ class ModernMediumScraperApp(BaseAppClass):
         try:
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 json.dump(self.config_data, f, ensure_ascii=False, indent=2)
-            messagebox.showinfo("Başarılı", f"{provider} ayarları config.json dosyasına kaydedildi!")
+            messagebox.showinfo("Başarılı", self.t("key_saved_msg").format(provider=provider))
         except Exception as e:
             messagebox.showerror("Hata", f"Kaydedilemedi: {e}")
 
@@ -456,17 +520,17 @@ class ModernMediumScraperApp(BaseAppClass):
         cat = self.ai_category_var.get().strip() or "genel"
 
         if not api_key:
-            messagebox.showwarning("API Key Eksik", f"Lütfen {provider} için bir API Key girin.")
+            messagebox.showwarning("API Key Eksik", self.t("key_missing_warn").format(provider=provider))
             return
 
         if selected_filename not in self.articles_cache:
-            messagebox.showwarning("Makale Seçilmedi", "Lütfen dönüştürülecek bir makale seçin.")
+            messagebox.showwarning("Makale Seçilmedi", self.t("no_art_selected_warn"))
             return
 
         file_path = self.articles_cache[selected_filename]
         self.ai_convert_btn.configure(state="disabled")
         self.ai_output_preview.delete("1.0", "end")
-        self.ai_output_preview.insert("1.0", f"[{provider} AI - {model_name}] Makale analiz ediliyor, eksikler tamamlanıyor ve İngilizceye çevriliyor...\nLütfen bekleyin (10-30 saniye)...")
+        self.ai_output_preview.insert("1.0", self.t("ai_processing_msg").format(provider=provider, model=model_name))
 
         def _worker():
             try:
@@ -503,9 +567,9 @@ class ModernMediumScraperApp(BaseAppClass):
 
                 def _update_ui_success():
                     self.ai_output_preview.delete("1.0", "end")
-                    self.ai_output_preview.insert("1.0", f"--- KAYDEDİLDİ ({provider}): {cat}/{en_filename} ---\n\n" + rewritten_md)
+                    self.ai_output_preview.insert("1.0", f"--- SAVED ({provider}): {cat}/{en_filename} ---\n\n" + rewritten_md)
                     self.ai_convert_btn.configure(state="normal")
-                    messagebox.showinfo("Başarılı", f"İngilizce makale ({provider}) kaydedildi:\n{cat}/{en_filename}")
+                    messagebox.showinfo("Başarılı", self.t("ai_saved_msg").format(provider=provider, filename=f"{cat}/{en_filename}"))
 
                 self.after(0, _update_ui_success)
 
@@ -585,7 +649,7 @@ class ModernMediumScraperApp(BaseAppClass):
         max_threads = int(self.threads_var.get() or 5)
 
         if not target_input and not self.batch_urls:
-            messagebox.showwarning("Uyarı", "Lütfen bir URL girin veya toplu dosya seçin.")
+            messagebox.showwarning("Uyarı", self.t("select_file_warn"))
             return
 
         self.fetch_btn.configure(state="disabled")

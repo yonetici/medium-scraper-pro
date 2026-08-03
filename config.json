@@ -4,6 +4,7 @@
   "download_images": false,
   "max_concurrent_threads": 5,
   "enable_ai_rewrite": false,
+  "ui_language": "TR",
   "selected_ai_provider": "DeepSeek",
   "ai_provider_keys": {
     "DeepSeek": "",
