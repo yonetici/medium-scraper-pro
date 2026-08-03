@@ -23,6 +23,7 @@ TRANSLATIONS = {
         "model_label": "Model İsmi:",
         "api_key": "API Key:",
         "save_settings": "Ayarları Kaydet",
+        "fetch_models": "Modelleri Yükle",
         "downloaded_articles_title": "İndirilmiş Makaleler",
         "category": "Kategori:",
         "article_label": "Makale Seç:",
@@ -37,7 +38,10 @@ TRANSLATIONS = {
         "key_missing_warn": "Lütfen {provider} için bir API Key girin.",
         "no_art_selected_warn": "Lütfen dönüştürülecek bir makale seçin.",
         "ai_processing_msg": "[{provider} AI - {model}] Makale analiz ediliyor, eksikler tamamlanıyor ve İngilizceye çevriliyor...\nLütfen bekleyin (10-30 saniye)...",
-        "ai_saved_msg": "İngilizce makale ({provider}) kaydedildi:\n{filename}"
+        "ai_saved_msg": "İngilizce makale ({provider}) kaydedildi:\n{filename}",
+        "models_fetching": "[{provider}] Canlı modeller sunucudan çekiliyor...",
+        "models_loaded": "{count} adet aktif model {provider} API üzerinden başarıyla yüklendi!",
+        "models_fetch_err": "Model listesi çekilemedi: {err}"
     },
     "EN": {
         "title": "Medium Scraper & Multi-AI Editor Pro",
@@ -58,6 +62,7 @@ TRANSLATIONS = {
         "model_label": "Model Name:",
         "api_key": "API Key:",
         "save_settings": "Save Settings",
+        "fetch_models": "Fetch Models",
         "downloaded_articles_title": "Downloaded Articles",
         "category": "Category:",
         "article_label": "Select Article:",
@@ -72,7 +77,10 @@ TRANSLATIONS = {
         "key_missing_warn": "Please enter an API Key for {provider}.",
         "no_art_selected_warn": "Please select an article to convert.",
         "ai_processing_msg": "[{provider} AI - {model}] Analyzing article, filling gaps, and rewriting in native English...\nPlease wait (10-30 seconds)...",
-        "ai_saved_msg": "English article ({provider}) saved successfully:\n{filename}"
+        "ai_saved_msg": "English article ({provider}) saved successfully:\n{filename}",
+        "models_fetching": "[{provider}] Fetching live models from server...",
+        "models_loaded": "{count} active models successfully loaded from {provider} API!",
+        "models_fetch_err": "Failed to fetch model list: {err}"
     }
 }
 

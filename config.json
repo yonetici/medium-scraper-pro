@@ -25,7 +25,7 @@
   ],
   "enable_ai_rewrite": false,
   "ui_language": "TR",
-  "selected_ai_provider": "DeepSeek",
+  "selected_ai_provider": "OpenAI",
   "ai_provider_keys": {
     "DeepSeek": "",
     "OpenAI": "",

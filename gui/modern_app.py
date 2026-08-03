@@ -23,7 +23,7 @@ try:
 except Exception:
     HAS_TKINTER = False
 
-from core.ai_rewriter import MultiProviderAIRewriter, PROVIDERS_REGISTRY
+from core.ai_rewriter import MultiProviderAIRewriter, PROVIDERS_REGISTRY, fetch_provider_models
 from core.image_downloader import localize_markdown_images
 from core.parser import build_markdown_with_frontmatter
 from core.scraper import MediumScraperCore
@@ -88,7 +88,6 @@ class ModernMediumScraperApp(BaseAppClass):
         return get_text(key, self.current_lang)
 
     def setup_ui(self):
-        # Top Language Bar
         top_bar = ctk.CTkFrame(self, fg_color="transparent") if HAS_CTK else ctk.Frame(self)
         top_bar.pack(fill="x", padx=15, pady=(10, 0))
         top_bar.grid_columnconfigure(0, weight=1)
@@ -112,7 +111,7 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(top_bar, textvariable=self.lang_var)
         self.lang_btn.grid(row=0, column=2, sticky="e")
 
-        # Tabview
+        # Tabview with fixed tab keys
         if HAS_CTK:
             self.tabview = ctk.CTkTabview(self)
             self.tabview.pack(fill="both", expand=True, padx=15, pady=10)
@@ -289,12 +288,12 @@ class ModernMediumScraperApp(BaseAppClass):
 
         init_model = self.config_data.get("ai_provider_models", {}).get(selected_prov, "deepseek-chat")
         self.ai_model_var = ctk.StringVar(value=init_model)
-        self.ai_model_entry = ctk.CTkEntry(
+        self.ai_model_combo = ctk.CTkComboBox(
             self.top_ai_frame,
-            textvariable=self.ai_model_var,
-            placeholder_text="gpt-4o / deepseek-chat / gemini-2.5-flash"
+            variable=self.ai_model_var,
+            values=PROVIDERS_REGISTRY.get(selected_prov, {}).get("fallback_models", [init_model])
         ) if HAS_CTK else ctk.Entry(self.top_ai_frame, textvariable=self.ai_model_var)
-        self.ai_model_entry.grid(row=0, column=3, padx=(5, 15), pady=10, sticky="ew")
+        self.ai_model_combo.grid(row=0, column=3, padx=(5, 15), pady=10, sticky="ew")
 
         self.api_key_label = ctk.CTkLabel(self.top_ai_frame, text="") if HAS_CTK else ctk.Label(self.top_ai_frame, text="")
         self.api_key_label.grid(row=1, column=0, padx=(15, 5), pady=(0, 10), sticky="w")
@@ -307,7 +306,16 @@ class ModernMediumScraperApp(BaseAppClass):
             placeholder_text="sk-...",
             show="*"
         ) if HAS_CTK else ctk.Entry(self.top_ai_frame, textvariable=self.ai_api_key_var, show="*")
-        self.ai_api_key_entry.grid(row=1, column=1, columnspan=2, padx=5, pady=(0, 10), sticky="ew")
+        self.ai_api_key_entry.grid(row=1, column=1, padx=5, pady=(0, 10), sticky="ew")
+
+        # Fetch Models Button
+        self.fetch_models_btn = ctk.CTkButton(
+            self.top_ai_frame,
+            text="",
+            width=120,
+            command=self.fetch_and_update_models_async
+        ) if HAS_CTK else ctk.Button(self.top_ai_frame, text="", command=self.fetch_and_update_models_async)
+        self.fetch_models_btn.grid(row=1, column=2, padx=5, pady=(0, 10))
 
         self.save_key_btn = ctk.CTkButton(
             self.top_ai_frame,
@@ -317,6 +325,7 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Button(self.top_ai_frame, text="", command=self.save_ai_key_click)
         self.save_key_btn.grid(row=1, column=3, padx=(5, 15), pady=(0, 10), sticky="ew")
 
+        # Sol Panel
         self.left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
         self.left_frame.grid(row=1, column=0, padx=(15, 5), pady=5, sticky="nsew")
         self.left_frame.grid_columnconfigure(1, weight=1)
@@ -362,6 +371,7 @@ class ModernMediumScraperApp(BaseAppClass):
             self.ai_orig_preview = st.ScrolledText(self.left_frame, wrap="word", height=15)
             self.ai_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
 
+        # Sağ Panel
         self.right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
         self.right_frame.grid(row=1, column=1, padx=(5, 15), pady=5, sticky="nsew")
         self.right_frame.grid_columnconfigure(0, weight=1)
@@ -406,7 +416,6 @@ class ModernMediumScraperApp(BaseAppClass):
 
         if HAS_CTK:
             self.app_title_label.configure(text=self.t("title"))
-            # Update CTkTabview tab header button texts cleanly
             try:
                 self.tabview._segmented_button._buttons_dict[self.tab_key_scraper].configure(text=self.t("tab_scraper"))
                 self.tabview._segmented_button._buttons_dict[self.tab_key_ai].configure(text=self.t("tab_ai"))
@@ -419,7 +428,6 @@ class ModernMediumScraperApp(BaseAppClass):
             except Exception:
                 pass
 
-        # Scraper Tab Labels & Controls
         self.url_label.configure(text=self.t("url_label"))
         self.url_entry.configure(placeholder_text=self.t("url_placeholder"))
         self.batch_btn.configure(text=self.t("batch_btn"))
@@ -438,10 +446,10 @@ class ModernMediumScraperApp(BaseAppClass):
             self.left_frame.configure(text=self.t("downloaded_articles_title"))
             self.right_frame.configure(text=self.t("ai_output_title"))
 
-        # AI Tab Labels & Controls
         self.ai_service_label.configure(text=self.t("ai_service"))
         self.model_label.configure(text=self.t("model_label"))
         self.api_key_label.configure(text=self.t("api_key"))
+        self.fetch_models_btn.configure(text=self.t("fetch_models"))
         self.save_key_btn.configure(text=self.t("save_settings"))
         self.ai_cat_sel_label.configure(text=self.t("category"))
         self.refresh_files_btn.configure(text=self.t("refresh_btn"))
@@ -473,6 +481,43 @@ class ModernMediumScraperApp(BaseAppClass):
         self.ai_api_key_var.set(key_val)
         self.ai_model_var.set(model_val)
         self.config_data["selected_ai_provider"] = provider
+
+        # Fallback models reset
+        fallbacks = PROVIDERS_REGISTRY.get(provider, {}).get("fallback_models", [default_model])
+        if HAS_CTK:
+            self.ai_model_combo.configure(values=fallbacks)
+
+        if key_val:
+            self.fetch_and_update_models_async()
+
+    def fetch_and_update_models_async(self):
+        provider = self.ai_provider_var.get().strip()
+        api_key = self.ai_api_key_var.get().strip()
+
+        if not api_key:
+            messagebox.showwarning("API Key Eksik", self.t("key_missing_warn").format(provider=provider))
+            return
+
+        self.fetch_models_btn.configure(state="disabled")
+
+        def _fetch_worker():
+            try:
+                models = fetch_provider_models(provider, api_key)
+                def _update_ui():
+                    if HAS_CTK and models:
+                        self.ai_model_combo.configure(values=models)
+                        self.ai_model_var.set(models[0])
+                    self.fetch_models_btn.configure(state="normal")
+                    messagebox.showinfo("Başarılı / Success", self.t("models_loaded").format(count=len(models), provider=provider))
+
+                self.after(0, _update_ui)
+            except Exception as e:
+                def _err_ui():
+                    self.fetch_models_btn.configure(state="normal")
+                    messagebox.showerror("Hata / Error", self.t("models_fetch_err").format(err=str(e)))
+                self.after(0, _err_ui)
+
+        threading.Thread(target=_fetch_worker, daemon=True).start()
 
     def on_ai_category_change(self, choice=None):
         self.refresh_ai_article_list()
@@ -534,6 +579,7 @@ class ModernMediumScraperApp(BaseAppClass):
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 json.dump(self.config_data, f, ensure_ascii=False, indent=2)
             messagebox.showinfo("Başarılı / Success", self.t("key_saved_msg").format(provider=provider))
+            self.fetch_and_update_models_async()
         except Exception as e:
             messagebox.showerror("Hata / Error", f"Kaydedilemedi / Error saving: {e}")
 
@@ -607,8 +653,7 @@ class ModernMediumScraperApp(BaseAppClass):
 
                 self.after(0, _update_ui_error)
 
-        t = threading.Thread(target=_worker, daemon=True)
-        t.start()
+        t = threading.Thread(target=_worker, daemon=True).start()
 
     # ---------------------------------------------------------------------------
     # ORTAK YARDIMCI İŞLEVLER (SEKME 1)

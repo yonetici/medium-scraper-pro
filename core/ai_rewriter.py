@@ -2,7 +2,7 @@ import json
 import ssl
 import urllib.request
 import urllib.error
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 from utils.helpers import load_config
 
@@ -10,19 +10,30 @@ from utils.helpers import load_config
 PROVIDERS_REGISTRY = {
     "DeepSeek": {
         "url": "https://api.deepseek.com/chat/completions",
-        "default_model": "deepseek-chat"
+        "models_url": "https://api.deepseek.com/models",
+        "default_model": "deepseek-chat",
+        "fallback_models": ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"]
     },
     "OpenAI": {
         "url": "https://api.openai.com/v1/chat/completions",
-        "default_model": "gpt-4o-mini"
+        "models_url": "https://api.openai.com/v1/models",
+        "default_model": "gpt-4o-mini",
+        "fallback_models": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "o1-mini", "o3-mini"]
     },
     "Gemini": {
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        "default_model": "gemini-2.5-flash"
+        "models_url": "https://generativelanguage.googleapis.com/v1beta/openai/models",
+        "default_model": "gemini-2.5-flash",
+        "fallback_models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
     },
     "OpenRouter": {
         "url": "https://openrouter.ai/api/v1/chat/completions",
+        "models_url": "https://openrouter.ai/api/v1/models",
         "default_model": "google/gemini-2.5-flash",
+        "fallback_models": [
+            "google/gemini-2.5-flash", "anthropic/claude-3.5-sonnet",
+            "openai/gpt-4o-mini", "deepseek/deepseek-r1", "meta-llama/llama-3.3-70b-instruct"
+        ],
         "extra_headers": {
             "HTTP-Referer": "https://github.com/yonetici/medium-scraper-pro",
             "X-Title": "Medium Scraper Pro"
@@ -30,21 +41,82 @@ PROVIDERS_REGISTRY = {
     },
     "Kimi": {
         "url": "https://api.moonshot.cn/v1/chat/completions",
-        "default_model": "moonshot-v1-8k"
+        "models_url": "https://api.moonshot.cn/v1/models",
+        "default_model": "moonshot-v1-8k",
+        "fallback_models": ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"]
     },
     "Grok": {
         "url": "https://api.x.ai/v1/chat/completions",
-        "default_model": "grok-2-latest"
+        "models_url": "https://api.x.ai/v1/models",
+        "default_model": "grok-2-latest",
+        "fallback_models": ["grok-2-latest", "grok-beta", "grok-vision-beta"]
     },
     "Qwen": {
         "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
-        "default_model": "qwen-plus"
+        "models_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models",
+        "default_model": "qwen-plus",
+        "fallback_models": ["qwen-plus", "qwen-max", "qwen-turbo", "qwen-coder-plus"]
     },
     "Custom": {
         "url": "",
-        "default_model": "custom-model"
+        "models_url": "",
+        "default_model": "custom-model",
+        "fallback_models": ["custom-model"]
     }
 }
+
+
+def fetch_provider_models(provider: str, api_key: str, custom_url: Optional[str] = None) -> List[str]:
+    """Seçili AI sağlayıcısının sunucusuna baglanarak aktif model listesini canlı çeker."""
+    if provider not in PROVIDERS_REGISTRY:
+        provider = "DeepSeek"
+
+    info = PROVIDERS_REGISTRY[provider]
+    models_url = info["models_url"]
+
+    if provider == "Custom":
+        if custom_url:
+            models_url = custom_url.replace("/chat/completions", "/models")
+        else:
+            return info["fallback_models"]
+
+    if not api_key:
+        return info["fallback_models"]
+
+    headers = {
+        "Authorization": f"Bearer {api_key.strip()}",
+        "User-Agent": "Mozilla/5.0"
+    }
+    if "extra_headers" in info:
+        headers.update(info["extra_headers"])
+
+    req = urllib.request.Request(models_url, headers=headers, method="GET")
+    ctx = ssl._create_unverified_context()
+
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=12) as resp:
+            data = resp.read().decode("utf-8")
+            res_json = json.loads(data)
+
+            model_ids = []
+            if "data" in res_json and isinstance(res_json["data"], list):
+                for item in res_json["data"]:
+                    if isinstance(item, dict) and "id" in item:
+                        m_id = item["id"]
+                        # Filter out TTS, embedding, whisper models to keep chat models prominent
+                        if not any(sub in m_id.lower() for sub in ["embed", "whisper", "tts", "dall-e", "moderation", "bge", "rerank"]):
+                            model_ids.append(m_id)
+            elif "models" in res_json and isinstance(res_json["models"], list):
+                for item in res_json["models"]:
+                    if isinstance(item, dict) and "name" in item:
+                        model_ids.append(item["name"].replace("models/", ""))
+
+            if model_ids:
+                return sorted(list(set(model_ids)))
+    except Exception:
+        pass
+
+    return info["fallback_models"]
 
 
 class MultiProviderAIRewriter:
@@ -130,7 +202,6 @@ Original Article Body:
             "Authorization": f"Bearer {self.api_key.strip()}"
         }
 
-        # Extra headers for specific providers like OpenRouter
         extra_headers = PROVIDERS_REGISTRY.get(self.provider, {}).get("extra_headers", {})
         headers.update(extra_headers)
 
@@ -160,5 +231,4 @@ Original Article Body:
             raise Exception(f"{self.provider} API Bağlantı Hatası: {e}")
 
 
-# Backward compatibility alias
 DeepSeekRewriter = MultiProviderAIRewriter
