@@ -1,21 +1,77 @@
 import json
 import ssl
 import urllib.request
+import urllib.error
 from typing import Dict, Any, Optional
 
 from utils.helpers import load_config
 
 
-class DeepSeekRewriter:
-    """DeepSeek API kullanarak makaleleri analiz eden, genişleten ve İngilizceye dönüştüren modül."""
+PROVIDERS_REGISTRY = {
+    "DeepSeek": {
+        "url": "https://api.deepseek.com/chat/completions",
+        "default_model": "deepseek-chat"
+    },
+    "OpenAI": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "default_model": "gpt-4o-mini"
+    },
+    "Gemini": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "default_model": "gemini-2.5-flash"
+    },
+    "OpenRouter": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "default_model": "google/gemini-2.5-flash",
+        "extra_headers": {
+            "HTTP-Referer": "https://github.com/yonetici/medium-scraper-pro",
+            "X-Title": "Medium Scraper Pro"
+        }
+    },
+    "Kimi": {
+        "url": "https://api.moonshot.cn/v1/chat/completions",
+        "default_model": "moonshot-v1-8k"
+    },
+    "Grok": {
+        "url": "https://api.x.ai/v1/chat/completions",
+        "default_model": "grok-2-latest"
+    },
+    "Qwen": {
+        "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "default_model": "qwen-plus"
+    },
+    "Custom": {
+        "url": "",
+        "default_model": "custom-model"
+    }
+}
 
-    def __init__(self, api_key: Optional[str] = None, logger=None):
+
+class MultiProviderAIRewriter:
+    """Çoklu AI Sağlayıcısı (OpenAI, Gemini, OpenRouter, DeepSeek, Kimi, Grok, Qwen) ile makale analiz ve yeniden yazım motoru."""
+
+    def __init__(
+        self,
+        provider: Optional[str] = None,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        custom_url: Optional[str] = None,
+        logger=None
+    ):
         self.config = load_config()
-        self.api_key = api_key or self.config.get("deepseek_api_key", "")
-        self.model = self.config.get("deepseek_model", "deepseek-chat")
-        self.temperature = self.config.get("deepseek_temperature", 0.7)
         self.logger = logger
-        self.api_url = "https://api.deepseek.com/chat/completions"
+
+        self.provider = provider or self.config.get("selected_ai_provider", "DeepSeek")
+        if self.provider not in PROVIDERS_REGISTRY:
+            self.provider = "DeepSeek"
+
+        provider_keys = self.config.get("ai_provider_keys", {})
+        provider_models = self.config.get("ai_provider_models", {})
+
+        self.api_key = api_key or provider_keys.get(self.provider, "")
+        self.model = model or provider_models.get(self.provider, PROVIDERS_REGISTRY[self.provider]["default_model"])
+        self.custom_url = custom_url or self.config.get("custom_base_url", "")
+        self.temperature = self.config.get("deepseek_temperature", 0.7)
 
     def _log(self, message: str):
         if self.logger and hasattr(self.logger, "log"):
@@ -23,12 +79,20 @@ class DeepSeekRewriter:
         else:
             print(message)
 
-    def rewrite_and_expand_article(self, original_markdown: str, metadata: Dict[str, Any]) -> str:
-        """Makaleyi analiz edip eksiklerini tamamlar ve akıcı İngilizce Markdown olarak yeniden üretir."""
-        if not self.api_key:
-            raise ValueError("DeepSeek API Key bulunamadı! Lütfen ayarlar alanından veya CLI parametresinden API Key girin.")
+    def get_endpoint_url(self) -> str:
+        if self.provider == "Custom":
+            if not self.custom_url:
+                raise ValueError("Custom (Özel) AI Sağlayıcısı için lütfen geçerli bir Base URL girin.")
+            return self.custom_url
+        return PROVIDERS_REGISTRY[self.provider]["url"]
 
-        self._log("[DeepSeek AI] Makale analiz ediliyor ve İngilizceye geliştirilerek yeniden yazılıyor...")
+    def rewrite_and_expand_article(self, original_markdown: str, metadata: Dict[str, Any]) -> str:
+        """Makaleyi seçili AI servis ile analiz edip eksiklerini tamamlar ve akıcı İngilizceye dönüştürür."""
+        if not self.api_key:
+            raise ValueError(f"{self.provider} API Key bulunamadı! Lütfen arayüzdeki API Key alanından giriş yapın.")
+
+        api_url = self.get_endpoint_url()
+        self._log(f"[{self.provider} AI - {self.model}] Makale analiz ediliyor ve İngilizceye geliştirilerek yeniden yazılıyor...")
 
         system_prompt = (
             "You are a world-class technical writer, software architect, and native English content strategist. "
@@ -66,13 +130,17 @@ Original Article Body:
             "Authorization": f"Bearer {self.api_key.strip()}"
         }
 
+        # Extra headers for specific providers like OpenRouter
+        extra_headers = PROVIDERS_REGISTRY.get(self.provider, {}).get("extra_headers", {})
+        headers.update(extra_headers)
+
         json_data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self.api_url, data=json_data, headers=headers, method="POST")
+        req = urllib.request.Request(api_url, data=json_data, headers=headers, method="POST")
 
         ctx = ssl._create_unverified_context()
 
         try:
-            timeout = self.config.get("request_timeout", 60)
+            timeout = self.config.get("request_timeout", 45)
             with urllib.request.urlopen(req, context=ctx, timeout=timeout) as response:
                 res_body = response.read().decode("utf-8")
                 res_json = json.loads(res_body)
@@ -80,13 +148,17 @@ Original Article Body:
                 choices = res_json.get("choices", [])
                 if choices and "message" in choices[0]:
                     rewritten_content = choices[0]["message"]["content"].strip()
-                    self._log("[DeepSeek AI] [Başarılı] Makale başarıyla geliştirildi ve İngilizceye çevrildi!")
+                    self._log(f"[{self.provider} AI] [Başarılı] Makale başarıyla geliştirildi ve İngilizceye çevrildi!")
                     return rewritten_content
                 else:
-                    raise Exception(f"DeepSeek API beklenmeyen yanıt döndürdü: {res_body[:200]}")
+                    raise Exception(f"{self.provider} API beklenmeyen yanıt döndürdü: {res_body[:200]}")
 
         except urllib.error.HTTPError as e:
             error_msg = e.read().decode("utf-8", errors="ignore")
-            raise Exception(f"DeepSeek API HTTP Hatası ({e.code}): {error_msg}")
+            raise Exception(f"{self.provider} API HTTP Hatası ({e.code}): {error_msg}")
         except Exception as e:
-            raise Exception(f"DeepSeek API Bağlantı Hatası: {e}")
+            raise Exception(f"{self.provider} API Bağlantı Hatası: {e}")
+
+
+# Backward compatibility alias
+DeepSeekRewriter = MultiProviderAIRewriter

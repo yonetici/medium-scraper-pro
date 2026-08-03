@@ -1,28 +1,43 @@
-# Medium Scraper & DeepSeek AI Editor Pro
+# Medium Scraper & Multi-AI Editor Pro
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GUI: CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-blueviolet.svg)](https://github.com/TomSchimansky/CustomTkinter)
-[![AI: DeepSeek](https://img.shields.io/badge/AI-DeepSeek_v3-deepskyblue.svg)](https://www.deepseek.com/)
+[![AI: Multi--Provider](https://img.shields.io/badge/AI-OpenAI_|_Gemini_|_DeepSeek_|_OpenRouter_|_Kimi_|_Grok_|_Qwen-deepskyblue.svg)](https://www.openai.com/)
 
-A powerful, high-performance **Medium Article Scraper & AI Content Editor** built with Python and CustomTkinter. Features a sleek **Tabbed Desktop Interface** to scrape Medium articles/profiles, archive images locally, select downloaded articles, analyze gaps, expand technical depth, and rewrite them into native English Markdown via **DeepSeek API**.
+A high-performance **Medium Article Scraper & Multi-AI Content Editor** built with Python and CustomTkinter. Features a **Tabbed Desktop Interface** to scrape Medium articles/profiles, archive images locally, select downloaded articles, analyze gaps, expand technical depth, and rewrite them into native English Markdown via major AI providers (**OpenAI**, **Gemini**, **DeepSeek**, **OpenRouter**, **Kimi**, **Grok**, **Qwen**, or **Custom Endpoints**).
 
 ---
 
-## ✨ Features & Interface Architecture
+## ✨ Major Features
 
-### 📌 Tab 1: 📥 Makale İndirici (Scraper & Downloader)
+### 🤖 Multi-Provider AI Engine (Not Direct Translation!)
+Supports major AI providers via an interactive dropdown:
+- **DeepSeek** (`deepseek-chat`)
+- **OpenAI** (`gpt-4o-mini`, `gpt-4o`)
+- **Gemini (Google)** (`gemini-2.5-flash`, `gemini-2.5-pro`)
+- **OpenRouter** (`google/gemini-2.5-flash`, `anthropic/claude-3.5-sonnet` etc.)
+- **Kimi (Moonshot AI)** (`moonshot-v1-8k`)
+- **Grok (xAI)** (`grok-2-latest`)
+- **Qwen (Alibaba DashScope)** (`qwen-plus`, `qwen-max`)
+- **Custom OpenAI-Compatible Endpoints**
+
+*Each provider maintains its own stored API key and model preference in `config.json`.*
+
+---
+
+## 📌 GUI Architecture
+
+### 📥 Tab 1: Makale İndirici (Scraper & Downloader)
 - **Flexible Inputs**: Scrape single article URLs, Medium user handles (e.g. `@welifiliz`), RSS feeds, or batch URL text files (`.txt`).
-- **Proxy Fallback Pipeline**: Automatically bypasses paywalls and DNS blocks (`Freedium` -> `ReadMedium` -> `Direct`).
+- **Proxy Fallback Pipeline**: Bypasses paywalls and DNS blocks (`Freedium` -> `ReadMedium` -> `Direct`).
 - **Multi-Threaded Scraping**: Fast concurrent downloads using Python's `ThreadPoolExecutor`.
-- **Local Image Archiving**: Automatically downloads images to `articles/<category>/images/` and converts links to relative local paths (`./images/img_...`).
-- **Syntax Highlighting & Rich Formatting**: Preserves code block language tags (`python`, `javascript`, `cpp`, etc.) during HTML-to-Markdown conversion.
+- **Local Image Archiving**: Downloads images to `articles/<category>/images/` and updates links to relative local paths (`./images/img_...`).
 
-### 📌 Tab 2: 🤖 AI Editor & İngilizce Yeniden Yazım (DeepSeek Converter)
+### 🤖 Tab 2: Multi-AI Editor & İngilizce Yeniden Yazım
 - **Local Article Browser & Selector**: Browse downloaded articles across local category subfolders with a live preview.
-- **DeepSeek AI Content Rewrite & Expansion**: Analyzes the selected article, identifies missing architectural/technical gaps, expands upon modern best practices, and rewrites it into fluent native English Markdown.
-- **Masked API Key Management**: Safely stores your DeepSeek API key in `config.json`.
-- **Live Side-by-Side Preview**: Displays both the original text and the generated English article inside the GUI.
+- **Provider Selector & Masked Key Inputs**: Switch between OpenAI, Gemini, DeepSeek, OpenRouter, Kimi, Grok, Qwen, or Custom endpoints with automatic API key memory.
+- **AI Content Rewrite & Expansion**: Analyzes the selected article, identifies missing architectural/technical gaps, expands upon modern best practices, and rewrites it into fluent native English Markdown.
 
 ---
 
@@ -45,27 +60,20 @@ A powerful, high-performance **Medium Article Scraper & AI Content Editor** buil
 
 ### 1. Graphical User Interface (GUI)
 
-Launch the tabbed desktop app simply by running:
+Launch the desktop interface simply by running:
 
 ```bash
 python mediumParse.py
 ```
 
-- Use **Sekme 1 (Makale İndirici)** to download Medium articles to `articles/`.
-- Switch to **Sekme 2 (AI Editor)** to pick any downloaded article, enter your DeepSeek API Key, and click **"✨ Seçili Makaleyi DeepSeek ile Geliştir & İngilizce Yaz"**.
-
----
-
 ### 2. Command Line Interface (CLI)
 
-#### Single Article Scraping + DeepSeek AI Rewrite
 ```bash
-python mediumParse.py -u "https://medium.com/@welifiliz/kurumsal-d%C3%BCnyada-react-ekosistemi-233776774cea" -c yazilim -f md --rewrite-en --api-key "sk-YOUR_DEEPSEEK_KEY"
-```
+# OpenAI with gpt-4o-mini
+python mediumParse.py -u "https://medium.com/@welifiliz/kurumsal-d%C3%BCnyada-react-ekosistemi-233776774cea" -c yazilim --rewrite-en --ai-provider "OpenAI" --ai-model "gpt-4o-mini" --api-key "sk-..."
 
-#### Batch Scraping from URL File
-```bash
-python mediumParse.py -b urls.txt -c python_articles -f json -t 8 --download-images
+# Gemini with gemini-2.5-flash
+python mediumParse.py -u "https://medium.com/@welifiliz" -c genel --rewrite-en --ai-provider "Gemini" --api-key "AIzaSy..."
 ```
 
 ---
