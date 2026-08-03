@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 
 from utils.helpers import load_config
 
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
 PROVIDERS_REGISTRY = {
     "DeepSeek": {
@@ -66,8 +67,34 @@ PROVIDERS_REGISTRY = {
 }
 
 
+def parse_api_error_message(error_body: str, http_code: int) -> str:
+    """API hata yanıtını ayrıştırır ve Türkçe anlaşılır açıklama üretir."""
+    try:
+        data = json.loads(error_body)
+        if "error" in data:
+            err = data["error"]
+            msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+            code = err.get("code", "") if isinstance(err, dict) else ""
+
+            if "insufficient_balance" in str(code).lower() or "insufficient balance" in str(msg).lower():
+                return f"Bakiye Yetersiz (Insufficient Balance): DeepSeek hesabınızda bakiye bulunmuyor. Lütfen platform.deepseek.com adresinden bakiye yükleyin."
+            if "invalid_api_key" in str(code).lower() or "authentication fails" in str(msg).lower() or http_code == 401:
+                return f"Geçersiz API Key (401): Girdiğiniz API Key doğrulamadan geçemedi. Lütfen API Anahtarınızı kontrol edin."
+            
+            return f"API Hatası ({http_code}): {msg}"
+    except Exception:
+        pass
+
+    if http_code == 401:
+        return "Geçersiz API Key (401 Auth Error). Lütfen API Key'inizi kontrol edin."
+    if http_code == 402:
+        return "Bakiye Yetersiz (402 Payment Required). Lütfen hesabınıza bakiye yükleyin."
+
+    return f"HTTP Hatası ({http_code}): {error_body[:200]}"
+
+
 def fetch_provider_models(provider: str, api_key: str, custom_url: Optional[str] = None) -> List[str]:
-    """Seçili AI sağlayıcısının sunucusuna baglanarak aktif model listesini canlı çeker."""
+    """Seçili AI sağlayıcısının sunucusuna bağlanarak aktif model listesini canlı çeker."""
     if provider not in PROVIDERS_REGISTRY:
         provider = "DeepSeek"
 
@@ -85,7 +112,8 @@ def fetch_provider_models(provider: str, api_key: str, custom_url: Optional[str]
 
     headers = {
         "Authorization": f"Bearer {api_key.strip()}",
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": DEFAULT_USER_AGENT,
+        "Accept": "application/json"
     }
     if "extra_headers" in info:
         headers.update(info["extra_headers"])
@@ -94,7 +122,7 @@ def fetch_provider_models(provider: str, api_key: str, custom_url: Optional[str]
     ctx = ssl._create_unverified_context()
 
     try:
-        with urllib.request.urlopen(req, context=ctx, timeout=12) as resp:
+        with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
             data = resp.read().decode("utf-8")
             res_json = json.loads(data)
 
@@ -103,7 +131,6 @@ def fetch_provider_models(provider: str, api_key: str, custom_url: Optional[str]
                 for item in res_json["data"]:
                     if isinstance(item, dict) and "id" in item:
                         m_id = item["id"]
-                        # Filter out TTS, embedding, whisper models to keep chat models prominent
                         if not any(sub in m_id.lower() for sub in ["embed", "whisper", "tts", "dall-e", "moderation", "bge", "rerank"]):
                             model_ids.append(m_id)
             elif "models" in res_json and isinstance(res_json["models"], list):
@@ -113,8 +140,12 @@ def fetch_provider_models(provider: str, api_key: str, custom_url: Optional[str]
 
             if model_ids:
                 return sorted(list(set(model_ids)))
-    except Exception:
-        pass
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="ignore")
+        parsed_msg = parse_api_error_message(err_body, e.code)
+        raise Exception(parsed_msg)
+    except Exception as e:
+        raise Exception(f"Model listesi çekilemedi: {e}")
 
     return info["fallback_models"]
 
@@ -199,7 +230,9 @@ Original Article Body:
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key.strip()}"
+            "Authorization": f"Bearer {self.api_key.strip()}",
+            "User-Agent": DEFAULT_USER_AGENT,
+            "Accept": "application/json"
         }
 
         extra_headers = PROVIDERS_REGISTRY.get(self.provider, {}).get("extra_headers", {})
@@ -225,10 +258,11 @@ Original Article Body:
                     raise Exception(f"{self.provider} API beklenmeyen yanıt döndürdü: {res_body[:200]}")
 
         except urllib.error.HTTPError as e:
-            error_msg = e.read().decode("utf-8", errors="ignore")
-            raise Exception(f"{self.provider} API HTTP Hatası ({e.code}): {error_msg}")
+            error_body = e.read().decode("utf-8", errors="ignore")
+            parsed_msg = parse_api_error_message(error_body, e.code)
+            raise Exception(f"[{self.provider} AI] {parsed_msg}")
         except Exception as e:
-            raise Exception(f"{self.provider} API Bağlantı Hatası: {e}")
+            raise Exception(f"[{self.provider} AI] Bağlantı/İşlem Hatası: {e}")
 
 
 DeepSeekRewriter = MultiProviderAIRewriter
