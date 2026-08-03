@@ -24,6 +24,7 @@ except Exception:
     HAS_TKINTER = False
 
 from core.ai_rewriter import MultiProviderAIRewriter, PROVIDERS_REGISTRY, fetch_provider_models
+from core.seo_social_generator import SEOSocialGenerator
 from core.image_downloader import localize_markdown_images
 from core.parser import build_markdown_with_frontmatter
 from core.scraper import MediumScraperCore
@@ -72,13 +73,15 @@ class ModernMediumScraperApp(BaseAppClass):
         self.msg_queue = queue.Queue()
         self.batch_urls = []
         self.articles_cache = {}
+        self.seo_articles_cache = {}
 
         self.tab_key_scraper = "TAB_SCRAPER"
         self.tab_key_ai = "TAB_AI"
+        self.tab_key_seo = "TAB_SEO"
         self.show_api_key_state = False
 
-        self.geometry("980x820")
-        self.minsize(900, 720)
+        self.geometry("1020x860")
+        self.minsize(940, 740)
 
         self.setup_ui()
         self.apply_language()
@@ -112,23 +115,27 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Entry(top_bar, textvariable=self.lang_var)
         self.lang_btn.grid(row=0, column=2, sticky="e")
 
-        # Tabview with fixed tab keys
+        # 3 Tab Setup
         if HAS_CTK:
             self.tabview = ctk.CTkTabview(self)
             self.tabview.pack(fill="both", expand=True, padx=15, pady=10)
 
             self.tab_scraper = self.tabview.add(self.tab_key_scraper)
             self.tab_ai = self.tabview.add(self.tab_key_ai)
+            self.tab_seo = self.tabview.add(self.tab_key_seo)
         else:
             self.notebook = ttk.Notebook(self)
             self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
             self.tab_scraper = ttk.Frame(self.notebook)
             self.tab_ai = ttk.Frame(self.notebook)
+            self.tab_seo = ttk.Frame(self.notebook)
             self.notebook.add(self.tab_scraper, text=self.tab_key_scraper)
             self.notebook.add(self.tab_ai, text=self.tab_key_ai)
+            self.notebook.add(self.tab_seo, text=self.tab_key_seo)
 
         self.build_scraper_tab()
         self.build_ai_editor_tab()
+        self.build_seo_social_tab()
 
     # ---------------------------------------------------------------------------
     # SEKME 1: MAKALE İNDİRİCİ
@@ -340,7 +347,7 @@ class ModernMediumScraperApp(BaseAppClass):
         ) if HAS_CTK else ctk.Button(self.top_ai_frame, text="", command=self.save_ai_key_click)
         self.save_key_btn.grid(row=1, column=3, padx=(5, 15), pady=(0, 10), sticky="ew")
 
-        # Sol Panel
+        # Left Panel (Articles)
         self.left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
         self.left_frame.grid(row=1, column=0, padx=(15, 5), pady=5, sticky="nsew")
         self.left_frame.grid_columnconfigure(1, weight=1)
@@ -386,7 +393,7 @@ class ModernMediumScraperApp(BaseAppClass):
             self.ai_orig_preview = st.ScrolledText(self.left_frame, wrap="word", height=15)
             self.ai_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
 
-        # Sağ Panel
+        # Right Panel (AI Rewrite Output)
         self.right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
         self.right_frame.grid(row=1, column=1, padx=(5, 15), pady=5, sticky="nsew")
         self.right_frame.grid_columnconfigure(0, weight=1)
@@ -412,6 +419,116 @@ class ModernMediumScraperApp(BaseAppClass):
             self.ai_output_preview.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
 
         self.refresh_ai_article_list()
+
+    # ---------------------------------------------------------------------------
+    # SEKME 3: SEO & SOSYAL MEDYA STUDIO
+    # ---------------------------------------------------------------------------
+    def build_seo_social_tab(self):
+        tab = self.tab_seo
+        tab.grid_columnconfigure((0, 1), weight=1)
+        tab.grid_rowconfigure(1, weight=1)
+
+        # Left Panel (SEO Article Selector)
+        self.seo_left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
+        self.seo_left_frame.grid(row=0, column=0, rowspan=2, padx=(15, 5), pady=10, sticky="nsew")
+        self.seo_left_frame.grid_columnconfigure(1, weight=1)
+        self.seo_left_frame.grid_rowconfigure(2, weight=1)
+
+        self.seo_cat_sel_label = ctk.CTkLabel(self.seo_left_frame, text="") if HAS_CTK else ctk.Label(self.seo_left_frame, text="")
+        self.seo_cat_sel_label.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="w")
+
+        self.seo_category_var = ctk.StringVar(value="genel")
+        self.seo_category_combo = ctk.CTkComboBox(
+            self.seo_left_frame,
+            variable=self.seo_category_var,
+            values=self.get_local_categories(),
+            command=self.on_seo_category_change
+        ) if HAS_CTK else ctk.Entry(self.seo_left_frame, textvariable=self.seo_category_var)
+        self.seo_category_combo.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
+
+        self.seo_refresh_btn = ctk.CTkButton(
+            self.seo_left_frame,
+            text="",
+            width=70,
+            command=self.refresh_seo_article_list
+        ) if HAS_CTK else ctk.Button(self.seo_left_frame, text="", command=self.refresh_seo_article_list)
+        self.seo_refresh_btn.grid(row=0, column=2, padx=(5, 10), pady=8)
+
+        self.seo_art_label = ctk.CTkLabel(self.seo_left_frame, text="") if HAS_CTK else ctk.Label(self.seo_left_frame, text="")
+        self.seo_art_label.grid(row=1, column=0, padx=(10, 5), pady=(0, 8), sticky="w")
+
+        self.seo_article_var = ctk.StringVar(value="")
+        self.seo_article_combo = ctk.CTkOptionMenu(
+            self.seo_left_frame,
+            variable=self.seo_article_var,
+            values=["..."],
+            command=self.on_seo_article_selected
+        ) if HAS_CTK else ctk.Entry(self.seo_left_frame, textvariable=self.seo_article_var)
+        self.seo_article_combo.grid(row=1, column=1, columnspan=2, padx=(5, 10), pady=(0, 8), sticky="ew")
+
+        if HAS_CTK:
+            self.seo_orig_preview = ctk.CTkTextbox(self.seo_left_frame, font=ctk.CTkFont(size=12))
+            self.seo_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
+        else:
+            import tkinter.scrolledtext as st
+            self.seo_orig_preview = st.ScrolledText(self.seo_left_frame, wrap="word", height=15)
+            self.seo_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
+
+        # Right Panel (SEO & Social Generation)
+        self.seo_right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
+        self.seo_right_frame.grid(row=0, column=1, rowspan=2, padx=(5, 15), pady=10, sticky="nsew")
+        self.seo_right_frame.grid_columnconfigure(0, weight=1)
+        self.seo_right_frame.grid_rowconfigure(2, weight=1)
+
+        self.seo_generate_btn = ctk.CTkButton(
+            self.seo_right_frame,
+            text="",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#e67e22",
+            hover_color="#d35400",
+            height=40,
+            command=self.start_seo_social_generation
+        ) if HAS_CTK else ctk.Button(self.seo_right_frame, text="", command=self.start_seo_social_generation)
+        self.seo_generate_btn.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+        # Quick Copy Bar
+        copy_bar = ctk.CTkFrame(self.seo_right_frame, fg_color="transparent") if HAS_CTK else ctk.Frame(self.seo_right_frame)
+        copy_bar.grid(row=1, column=0, padx=10, pady=(0, 8), sticky="ew")
+        copy_bar.grid_columnconfigure((0, 1, 2, 3), weight=1)
+
+        self.copy_all_btn = ctk.CTkButton(
+            copy_bar, text="📋 Copy All", height=28, fg_color="gray30", hover_color="gray40",
+            command=lambda: self.copy_to_clipboard(self.seo_output_preview.get("1.0", "end"))
+        ) if HAS_CTK else ctk.Button(copy_bar, text="📋 Copy All", command=lambda: self.copy_to_clipboard(self.seo_output_preview.get("1.0", "end")))
+        self.copy_all_btn.grid(row=0, column=0, padx=2, sticky="ew")
+
+        self.copy_twitter_btn = ctk.CTkButton(
+            copy_bar, text="🐦 Twitter Thread", height=28, fg_color="#1da1f2", hover_color="#0c85d0",
+            command=lambda: self.copy_section_to_clipboard("## 🐦 Twitter / X Thread")
+        ) if HAS_CTK else ctk.Button(copy_bar, text="🐦 Twitter Thread", command=lambda: self.copy_section_to_clipboard("## 🐦 Twitter / X Thread"))
+        self.copy_twitter_btn.grid(row=0, column=1, padx=2, sticky="ew")
+
+        self.copy_linkedin_btn = ctk.CTkButton(
+            copy_bar, text="💼 LinkedIn Post", height=28, fg_color="#0077b5", hover_color="#005885",
+            command=lambda: self.copy_section_to_clipboard("## 💼 LinkedIn Article Post")
+        ) if HAS_CTK else ctk.Button(copy_bar, text="💼 LinkedIn Post", command=lambda: self.copy_section_to_clipboard("## 💼 LinkedIn Article Post"))
+        self.copy_linkedin_btn.grid(row=0, column=2, padx=2, sticky="ew")
+
+        self.copy_seo_btn = ctk.CTkButton(
+            copy_bar, text="🎯 SEO Package", height=28, fg_color="#27ae60", hover_color="#219150",
+            command=lambda: self.copy_section_to_clipboard("## 🎯 SEO & Metadata Package")
+        ) if HAS_CTK else ctk.Button(copy_bar, text="🎯 SEO Package", command=lambda: self.copy_section_to_clipboard("## 🎯 SEO & Metadata Package"))
+        self.copy_seo_btn.grid(row=0, column=3, padx=2, sticky="ew")
+
+        if HAS_CTK:
+            self.seo_output_preview = ctk.CTkTextbox(self.seo_right_frame, font=ctk.CTkFont(size=12))
+            self.seo_output_preview.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        else:
+            import tkinter.scrolledtext as st
+            self.seo_output_preview = st.ScrolledText(self.seo_right_frame, wrap="word", height=15)
+            self.seo_output_preview.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="nsew")
+
+        self.refresh_seo_article_list()
 
     def toggle_show_api_key(self):
         self.show_api_key_state = not self.show_api_key_state
@@ -442,12 +559,14 @@ class ModernMediumScraperApp(BaseAppClass):
             try:
                 self.tabview._segmented_button._buttons_dict[self.tab_key_scraper].configure(text=self.t("tab_scraper"))
                 self.tabview._segmented_button._buttons_dict[self.tab_key_ai].configure(text=self.t("tab_ai"))
+                self.tabview._segmented_button._buttons_dict[self.tab_key_seo].configure(text=self.t("tab_seo"))
             except Exception:
                 pass
         else:
             try:
                 self.notebook.tab(0, text=self.t("tab_scraper"))
                 self.notebook.tab(1, text=self.t("tab_ai"))
+                self.notebook.tab(2, text=self.t("tab_seo"))
             except Exception:
                 pass
 
@@ -468,7 +587,10 @@ class ModernMediumScraperApp(BaseAppClass):
             self.top_ai_frame.configure(text=self.t("ai_settings_title"))
             self.left_frame.configure(text=self.t("downloaded_articles_title"))
             self.right_frame.configure(text=self.t("ai_output_title"))
+            self.seo_left_frame.configure(text=self.t("downloaded_articles_title"))
+            self.seo_right_frame.configure(text=self.t("tab_seo"))
 
+        # AI Tab Labels
         self.ai_service_label.configure(text=self.t("ai_service"))
         self.model_label.configure(text=self.t("model_label"))
         self.api_key_label.configure(text=self.t("api_key"))
@@ -479,10 +601,21 @@ class ModernMediumScraperApp(BaseAppClass):
         self.ai_art_sel_label.configure(text=self.t("article_label"))
         self.ai_convert_btn.configure(text=self.t("convert_btn"))
 
+        # SEO Tab Labels
+        self.seo_cat_sel_label.configure(text=self.t("category"))
+        self.seo_refresh_btn.configure(text=self.t("refresh_btn"))
+        self.seo_art_label.configure(text=self.t("article_label"))
+        self.seo_generate_btn.configure(text=self.t("seo_btn"))
+        self.copy_all_btn.configure(text=self.t("copy_all"))
+        self.copy_twitter_btn.configure(text=self.t("copy_twitter"))
+        self.copy_linkedin_btn.configure(text=self.t("copy_linkedin"))
+        self.copy_seo_btn.configure(text=self.t("copy_seo"))
+
         self.refresh_ai_article_list()
+        self.refresh_seo_article_list()
 
     # ---------------------------------------------------------------------------
-    # MANTIKSAL İŞLEVLER
+    # MANTIKSAL İŞLEVLER (SEKME 2 & 3)
     # ---------------------------------------------------------------------------
     def get_local_categories(self):
         categories = ["genel"]
@@ -564,6 +697,7 @@ class ModernMediumScraperApp(BaseAppClass):
 
         threading.Thread(target=_fetch_worker, daemon=True).start()
 
+    # SEKME 2 LOGIC
     def on_ai_category_change(self, choice=None):
         self.refresh_ai_article_list()
 
@@ -574,7 +708,7 @@ class ModernMediumScraperApp(BaseAppClass):
 
         if cat_dir.exists():
             for p in cat_dir.glob("*.*"):
-                if p.is_file() and p.suffix in [".md", ".json", ".txt"] and not p.name.endswith("_en.md"):
+                if p.is_file() and p.suffix in [".md", ".json", ".txt"] and not p.name.endswith("_en.md") and not p.name.endswith("_social.md"):
                     self.articles_cache[p.name] = p
 
         files = sorted(list(self.articles_cache.keys()))
@@ -630,9 +764,7 @@ class ModernMediumScraperApp(BaseAppClass):
             messagebox.showwarning("Makale Seçilmedi", self.t("no_art_selected_warn"))
             return
 
-        # Auto-persist key and model choices
         self.persist_ai_provider_config(provider, api_key, model_name)
-
         file_path = self.articles_cache[selected_filename]
         self.ai_convert_btn.configure(state="disabled")
         self.ai_output_preview.delete("1.0", "end")
@@ -675,6 +807,7 @@ class ModernMediumScraperApp(BaseAppClass):
                     self.ai_output_preview.delete("1.0", "end")
                     self.ai_output_preview.insert("1.0", f"--- SAVED ({provider}): {cat}/{en_filename} ---\n\n" + rewritten_md)
                     self.ai_convert_btn.configure(state="normal")
+                    self.refresh_seo_article_list()
                     messagebox.showinfo("Başarılı / Success", self.t("ai_saved_msg").format(provider=provider, filename=f"{cat}/{en_filename}"))
 
                 self.after(0, _update_ui_success)
@@ -685,6 +818,137 @@ class ModernMediumScraperApp(BaseAppClass):
                     self.ai_output_preview.delete("1.0", "end")
                     self.ai_output_preview.insert("1.0", f"[HATA] {provider} AI İşlem Başarısız / Failed:\n{msg}")
                     self.ai_convert_btn.configure(state="normal")
+                    messagebox.showerror("Hata / Error", msg)
+
+                self.after(0, _update_ui_error)
+
+        t = threading.Thread(target=_worker, daemon=True).start()
+
+    # SEKME 3 LOGIC
+    def on_seo_category_change(self, choice=None):
+        self.refresh_seo_article_list()
+
+    def refresh_seo_article_list(self):
+        cat = self.seo_category_var.get().strip() or "genel"
+        cat_dir = MAKALELER_DIR / cat
+        self.seo_articles_cache = {}
+
+        if cat_dir.exists():
+            for p in cat_dir.glob("*.*"):
+                if p.is_file() and p.suffix in [".md", ".json", ".txt"] and not p.name.endswith("_social.md"):
+                    self.seo_articles_cache[p.name] = p
+
+        files = sorted(list(self.seo_articles_cache.keys()))
+        if files:
+            if HAS_CTK:
+                self.seo_article_combo.configure(values=files)
+            self.seo_article_var.set(files[0])
+            self.on_seo_article_selected(files[0])
+        else:
+            if HAS_CTK:
+                self.seo_article_combo.configure(values=[self.t("no_articles_cat")])
+            self.seo_article_var.set(self.t("no_articles_cat"))
+            self.seo_orig_preview.delete("1.0", "end")
+            self.seo_orig_preview.insert("1.0", self.t("no_articles_cat"))
+
+    def on_seo_article_selected(self, choice):
+        if choice in self.seo_articles_cache:
+            file_path = self.seo_articles_cache[choice]
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                self.seo_orig_preview.delete("1.0", "end")
+                self.seo_orig_preview.insert("1.0", content[:3000] + ("\n\n... (devamı var)" if len(content) > 3000 else ""))
+            except Exception as e:
+                self.seo_orig_preview.delete("1.0", "end")
+                self.seo_orig_preview.insert("1.0", f"Dosya okunamadı: {e}")
+
+    def copy_to_clipboard(self, text: str):
+        if not text.strip():
+            return
+        self.clipboard_clear()
+        self.clipboard_append(text.strip())
+        messagebox.showinfo("Kopyalandı / Copied", self.t("copied_msg"))
+
+    def copy_section_to_clipboard(self, section_header: str):
+        full_text = self.seo_output_preview.get("1.0", "end")
+        if section_header in full_text:
+            parts = full_text.split(section_header)
+            if len(parts) > 1:
+                section_body = parts[1].split("\n## ")[0].strip()
+                self.copy_to_clipboard(f"{section_header}\n\n{section_body}")
+                return
+        self.copy_to_clipboard(full_text)
+
+    def start_seo_social_generation(self):
+        provider = self.ai_provider_var.get().strip()
+        api_key = self.ai_api_key_var.get().strip()
+        model_name = self.ai_model_var.get().strip()
+        selected_filename = self.seo_article_var.get()
+        cat = self.seo_category_var.get().strip() or "genel"
+
+        if not api_key:
+            messagebox.showwarning("API Key Eksik", self.t("key_missing_warn").format(provider=provider))
+            return
+
+        if selected_filename not in self.seo_articles_cache:
+            messagebox.showwarning("Makale Seçilmedi", self.t("no_art_selected_warn"))
+            return
+
+        self.persist_ai_provider_config(provider, api_key, model_name)
+        file_path = self.seo_articles_cache[selected_filename]
+
+        self.seo_generate_btn.configure(state="disabled")
+        self.seo_output_preview.delete("1.0", "end")
+        self.seo_output_preview.insert("1.0", self.t("seo_processing_msg").format(provider=provider, model=model_name))
+
+        def _worker():
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    raw_content = f.read()
+
+                title = file_path.stem
+                orig_url = ""
+
+                if file_path.suffix == ".json":
+                    try:
+                        jdata = json.loads(raw_content)
+                        title = jdata.get("metadata", {}).get("title", title)
+                        orig_url = jdata.get("metadata", {}).get("original_url", "")
+                        raw_content = jdata.get("content_markdown", raw_content)
+                    except Exception:
+                        pass
+                else:
+                    title_match = re.search(r'title:\s*"(.*?)"', raw_content)
+                    if title_match:
+                        title = title_match.group(1)
+                    url_match = re.search(r'original_url:\s*"(.*?)"', raw_content)
+                    if url_match:
+                        orig_url = url_match.group(1)
+
+                metadata = {"title": title, "original_url": orig_url, "author": ""}
+                generator = SEOSocialGenerator(provider=provider, api_key=api_key, model=model_name)
+                social_package_md = generator.generate_seo_and_social_package(raw_content, metadata)
+
+                social_filename = f"{file_path.stem}_social.md"
+                social_file_path = (MAKALELER_DIR / cat) / social_filename
+                with open(social_file_path, "w", encoding="utf-8") as f:
+                    f.write(social_package_md)
+
+                def _update_ui_success():
+                    self.seo_output_preview.delete("1.0", "end")
+                    self.seo_output_preview.insert("1.0", f"--- SAVED ({provider}): {cat}/{social_filename} ---\n\n" + social_package_md)
+                    self.seo_generate_btn.configure(state="normal")
+                    messagebox.showinfo("Başarılı / Success", self.t("seo_saved_msg").format(provider=provider, filename=f"{cat}/{social_filename}"))
+
+                self.after(0, _update_ui_success)
+
+            except Exception as err:
+                err_msg = str(err)
+                def _update_ui_error(msg=err_msg):
+                    self.seo_output_preview.delete("1.0", "end")
+                    self.seo_output_preview.insert("1.0", f"[HATA] {provider} SEO & Sosyal Üretim Başarısız / Failed:\n{msg}")
+                    self.seo_generate_btn.configure(state="normal")
                     messagebox.showerror("Hata / Error", msg)
 
                 self.after(0, _update_ui_error)
@@ -731,6 +995,7 @@ class ModernMediumScraperApp(BaseAppClass):
                     if self.progress_bar:
                         self.progress_bar.set(1.0)
                     self.refresh_ai_article_list()
+                    self.refresh_seo_article_list()
                 elif msg_type == "error":
                     self.fetch_btn.configure(state="normal")
                     messagebox.showerror("Hata / Error", payload)

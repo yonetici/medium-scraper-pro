@@ -1,4 +1,4 @@
-# Medium Scraper & Multi-AI Editor Pro
+# Medium Scraper & Multi-AI Publisher Pro
 
 [🇺🇸 English Documentation](README.md) | [🇹🇷 Türkçe Dokümantasyon](README.tr.md)
 
@@ -7,7 +7,7 @@
 [![GUI: CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-blueviolet.svg)](https://github.com/TomSchimansky/CustomTkinter)
 [![AI: Multi--Provider](https://img.shields.io/badge/AI-OpenAI_|_Gemini_|_DeepSeek_|_OpenRouter_|_Kimi_|_Grok_|_Qwen-deepskyblue.svg)](https://www.openai.com/)
 
-A high-performance **Medium Article Scraper & Multi-AI Content Editor** built with Python and CustomTkinter. Features a **Tabbed Desktop Interface** with instant **Bilingual UI Toggle (TR / EN)** to scrape Medium articles/profiles, archive images locally, select downloaded articles, analyze gaps, expand technical depth, and rewrite them into native English Markdown via major AI providers (**OpenAI**, **Gemini**, **DeepSeek**, **OpenRouter**, **Kimi**, **Grok**, **Qwen**, or **Custom Endpoints**).
+A high-performance **Medium Article Scraper, Multi-AI Content Editor & SEO/Social Media Publishing Studio** built with Python and CustomTkinter. Features a **3-Tab Desktop Interface** with instant **Bilingual UI Toggle (TR / EN)** to scrape Medium articles/profiles, archive images locally, select downloaded articles, analyze gaps, expand technical depth, rewrite them into native English Markdown, and generate complete **SEO & Social Media Packages** (Twitter Threads, LinkedIn Posts, Meta Tags, Newsletters).
 
 ---
 
@@ -17,7 +17,7 @@ A high-performance **Medium Article Scraper & Multi-AI Content Editor** built wi
 Includes a real-time **TR | EN** language switch in the header bar. Toggle between Turkish and English instantly without restarting the application!
 
 ### 🤖 Multi-Provider AI Engine (Not Direct Translation!)
-Supports major AI providers via an interactive dropdown:
+Supports major AI providers via an interactive dropdown with live `/models` endpoint fetching:
 - **DeepSeek** (`deepseek-chat`)
 - **OpenAI** (`gpt-4o-mini`, `gpt-4o`)
 - **Gemini (Google)** (`gemini-2.5-flash`, `gemini-2.5-pro`)
@@ -27,11 +27,9 @@ Supports major AI providers via an interactive dropdown:
 - **Qwen (Alibaba DashScope)** (`qwen-plus`, `qwen-max`)
 - **Custom OpenAI-Compatible Endpoints**
 
-*Each provider maintains its own stored API key and model preference in `config.json`.*
-
 ---
 
-## 📌 GUI Architecture
+## 📌 3-Tab Desktop Architecture
 
 ### 📥 Tab 1: Makale İndirici / Article Downloader
 - **Flexible Inputs**: Scrape single article URLs, Medium user handles (e.g. `@welifiliz`), RSS feeds, or batch URL text files (`.txt`).
@@ -41,8 +39,16 @@ Supports major AI providers via an interactive dropdown:
 
 ### 🤖 Tab 2: Multi-AI Editor & English Rewriter
 - **Local Article Browser & Selector**: Browse downloaded articles across local category subfolders with a live preview.
-- **Provider Selector & Masked Key Inputs**: Switch between OpenAI, Gemini, DeepSeek, OpenRouter, Kimi, Grok, Qwen, or Custom endpoints with automatic API key memory.
-- **AI Content Rewrite & Expansion**: Analyzes the selected article, identifies missing architectural/technical gaps, expands upon modern best practices, and rewrites it into fluent native English Markdown.
+- **Provider Selector & Masked Key Inputs**: Switch between OpenAI, Gemini, DeepSeek, OpenRouter, Kimi, Grok, Qwen, or Custom endpoints with automatic API key memory and eye toggle (`👁️`).
+- **AI Content Rewrite & Expansion**: Analyzes the selected article, identifies missing architectural/technical gaps, expands upon modern best practices, and rewrites it into fluent native English Markdown (`_en.md`).
+
+### 📊 Tab 3: SEO & Social Media Studio (NEW!)
+- **SEO & Metadata Package**: Generates 5 high-CTR H1 title headlines, meta descriptions, primary/secondary keywords, target audience, reading time, and Schema.org JSON-LD structured data.
+- **Twitter/X Thread Generator**: Generates 5-7 tweet numbered hook chain with emojis and hashtags.
+- **LinkedIn Post Generator**: Generates professional storytelling post format with strong call-to-action.
+- **Instagram & Threads Caption**: Visual summary caption with hashtags.
+- **Newsletter Draft**: Subject line and intro hook body for Substack / Mailchimp.
+- **One-Click Clipboard Copying**: Quick copy buttons for Twitter, LinkedIn, SEO package, or Full Package export (`_social.md`).
 
 ---
 
@@ -74,11 +80,8 @@ python mediumParse.py
 ### 2. Command Line Interface (CLI)
 
 ```bash
-# OpenAI with gpt-4o-mini
-python mediumParse.py -u "https://medium.com/@welifiliz/kurumsal-d%C3%BCnyada-react-ekosistemi-233776774cea" -c yazilim --rewrite-en --ai-provider "OpenAI" --ai-model "gpt-4o-mini" --api-key "sk-..."
-
-# Gemini with gemini-2.5-flash
-python mediumParse.py -u "https://medium.com/@welifiliz" -c genel --rewrite-en --ai-provider "Gemini" --api-key "AIzaSy..."
+# Scrape single article
+python mediumParse.py -u "https://medium.com/@welifiliz/kurumsal-d%C3%BCnyada-react-ekosistemi-233776774cea" -c yazilim
 ```
 
 ---

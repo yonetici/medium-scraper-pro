@@ -1,4 +1,4 @@
-# Medium Scraper & Multi-AI Editor Pro (Türkçe)
+# Medium Scraper & Multi-AI Publisher Pro (Türkçe)
 
 [🇺🇸 English Documentation](README.md) | [🇹🇷 Türkçe Dokümantasyon](README.tr.md)
 
@@ -7,13 +7,16 @@
 [![GUI: CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-blueviolet.svg)](https://github.com/TomSchimansky/CustomTkinter)
 [![AI: Multi--Provider](https://img.shields.io/badge/AI-OpenAI_|_Gemini_|_DeepSeek_|_OpenRouter_|_Kimi_|_Grok_|_Qwen-deepskyblue.svg)](https://www.openai.com/)
 
-Python ve CustomTkinter ile geliştirilmiş gelişmiş bir **Medium Makale İndirici & Çoklu Yapay Zeka (AI) İçerik Editörü**. Makaleleri/profilleri indirir, görselleri yerel dizine kaydeder ve indirilen yazıları major AI servisleri (**OpenAI**, **Gemini**, **DeepSeek**, **OpenRouter**, **Kimi**, **Grok**, **Qwen** veya **Özel Endpoint'ler**) kullanarak analiz edip, teknik eksiklerini tamamlayarak akıcı native İngilizceye dönüştürür.
+Python ve CustomTkinter ile geliştirilmiş gelişmiş bir **Medium Makale İndirici, Çoklu AI Editör & SEO/Sosyal Medya Yayınlama Studio**. **3 Sekmeli Masaüstü Arayüzü** ve **TR/EN Çift Dil Geçişi** ile makaleleri indirir, görselleri yerel dizine kaydeder, indirilen yazıları major AI servisleri (**OpenAI**, **Gemini**, **DeepSeek**, **OpenRouter**, **Kimi**, **Grok**, **Qwen**) kullanarak analiz edip akıcı native İngilizceye dönüştürür ve tek tıkla **SEO & Sosyal Medya Paketleri** (Twitter Thread, LinkedIn, Instagram, Bülten) üretir.
 
 ---
 
 ## ✨ Temel Özellikler
 
-### 🤖 Çoklu AI Servis Desteği (Birebir çeviri değildir!)
+### 🌐 Çift Dilli Arayüz Desteği (TR / EN)
+Masaüstü arayüzünün sağ üst köşesinde **TR | EN** dil geçişi mevcuttur. İstediğiniz zaman arayüz dilini Türkçe veya İngilizceye anlık olarak değiştirebilirsiniz.
+
+### 🤖 Çoklu AI Servis Desteği ve Canlı Model Çekme
 Seçilen yapay zeka servisi makaleyi analiz eder, anlatım boşluklarını ve eksik teknik detayları/kod örneklerini tespit eder, güncel en iyi pratiklerle (best practices) zenginleştirerek profesyonel İngilizceye dönüştürür.
 - **DeepSeek** (`deepseek-chat`)
 - **OpenAI** (`gpt-4o-mini`, `gpt-4o`)
@@ -24,14 +27,9 @@ Seçilen yapay zeka servisi makaleyi analiz eder, anlatım boşluklarını ve ek
 - **Qwen (Alibaba DashScope)** (`qwen-plus`, `qwen-max`)
 - **Custom (Özel OpenAI-uyumlu Endpoint'ler)**
 
-*Her servis için girilen API Key ve model tercihleri `config.json` dosyasında ayrı ayrı saklanır.*
-
 ---
 
-## 📌 Arayüz Yapısı (Sekmeli Görünüm)
-
-### 🌐 Çift Dilli Arayüz Desteği (TR / EN)
-Masaüstü arayüzünün sağ üst köşesinde **TR | EN** dil geçişi mevcuttur. İstediğiniz zaman arayüz dilini Türkçe veya İngilizceye anlık olarak değiştirebilirsiniz.
+## 📌 3 Sekmeli Arayüz Yapısı
 
 ### 📥 Sekme 1: Makale İndirici
 - **Girdi Seçenekleri**: Tekil makale URL'si, Medium kullanıcı adı (`@kullanici`), RSS akışı veya toplu metin dosyası (`.txt`).
@@ -42,6 +40,15 @@ Masaüstü arayüzünün sağ üst köşesinde **TR | EN** dil geçişi mevcuttu
 ### 🤖 Sekme 2: Multi-AI Editor & İngilizce Yeniden Yazım
 - **İndirilmiş Makale Seçici**: İndirilen makaleleri kategorilerine göre listeleyin ve orijinal metni sol panelde canlı önizleyin.
 - **AI Dönüştürücü**: Seçilen makaleyi tercih ettiğiniz AI servisi ile tek tıkla analiz edip İngilizceye genişleterek `_en.md` olarak kaydedin.
+- **Otomatik Kayıt & Parola Göster/Gizle**: API Key'ler kalıcı hafızada tutulur ve göz ikonu (`👁️`) ile kontrol edilebilir.
+
+### 📊 Sekme 3: SEO & Sosyal Medya Studio (YENİ!)
+- **SEO & Metadata Paketi**: 5 CTR odaklı H1 başlık alternatifi, Meta Description (açıklama), odak anahtar kelimeler, okuma süresi ve Schema.org JSON-LD verisi.
+- **Twitter/X Thread**: 5-7 tweetlik numaralı, emojili ve etiketli paylaşım zinciri.
+- **LinkedIn Gönderisi**: Profesyonel hikaye anlatımı dilinde gönderi taslağı.
+- **Instagram & Threads Açıklaması**: Görsel altı ilgi çekici özet metin.
+- **E-Posta Bülteni (Newsletter)**: Substack / Mailchimp için konu başlığı ve giriş metni.
+- **Hızlı Pano Kopyalama**: Tek tıkla Twitter, LinkedIn veya SEO paketini panoya kopyalama ve `_social.md` olarak kaydetme.
 
 ---
 
@@ -68,16 +75,6 @@ Arayüzü başlatmak için:
 
 ```bash
 python mediumParse.py
-```
-
-### 2. Komut Satırı Kullanımı (CLI)
-
-```bash
-# OpenAI gpt-4o-mini ile çalıştırma:
-python mediumParse.py -u "https://medium.com/@welifiliz/kurumsal-d%C3%BCnyada-react-ekosistemi-233776774cea" -c yazilim --rewrite-en --ai-provider "OpenAI" --ai-model "gpt-4o-mini" --api-key "sk-..."
-
-# Gemini ile çalıştırma:
-python mediumParse.py -u "https://medium.com/@welifiliz" -c genel --rewrite-en --ai-provider "Gemini" --api-key "AIzaSy..."
 ```
 
 ---

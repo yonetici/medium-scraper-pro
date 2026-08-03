@@ -7,7 +7,8 @@ TRANSLATIONS = {
     "TR": {
         "title": "Medium Makale İndirici & Multi-AI Editor Pro",
         "tab_scraper": "📥 Makale İndirici",
-        "tab_ai": "🤖 Multi-AI Editor & İngilizce Yeniden Yazım",
+        "tab_ai": "🤖 Multi-AI Editor & İngilizce Yazım",
+        "tab_seo": "📊 SEO & Sosyal Medya Studio",
         "url_label": "Profil URL'si (@kullanici), Makale Linki veya RSS:",
         "url_placeholder": "https://medium.com/@kullanici veya makale URL",
         "batch_btn": "Toplu Dosya Seç (.txt)",
@@ -36,17 +37,27 @@ TRANSLATIONS = {
         "select_file_warn": "Lütfen bir URL girin veya toplu dosya seçin.",
         "key_saved_msg": "{provider} ayarları config.json dosyasına kaydedildi!",
         "key_missing_warn": "Lütfen {provider} için bir API Key girin.",
-        "no_art_selected_warn": "Lütfen dönüştürülecek bir makale seçin.",
+        "no_art_selected_warn": "Lütfen bir makale seçin.",
         "ai_processing_msg": "[{provider} AI - {model}] Makale analiz ediliyor, eksikler tamamlanıyor ve İngilizceye çevriliyor...\nLütfen bekleyin (10-30 saniye)...",
         "ai_saved_msg": "İngilizce makale ({provider}) kaydedildi:\n{filename}",
         "models_fetching": "[{provider}] Canlı modeller sunucudan çekiliyor...",
         "models_loaded": "{count} adet aktif model {provider} API üzerinden başarıyla yüklendi!",
-        "models_fetch_err": "Model listesi çekilemedi: {err}"
+        "models_fetch_err": "Model listesi çekilemedi: {err}",
+        "seo_btn": "✨ Seçili Makale İçin SEO & Sosyal Medya İçerikleri Üret",
+        "seo_processing_msg": "[{provider} AI - {model}] SEO Meta paketleri, Twitter Thread, LinkedIn, Instagram ve Bülten yazısı üretiliyor...\nLütfen bekleyin...",
+        "seo_saved_msg": "SEO & Sosyal Medya Paketi ({provider}) kaydedildi:\n{filename}",
+        "copy_all": "📋 Tümünü Kopyala",
+        "copy_twitter": "🐦 Twitter Thread Kopyala",
+        "copy_linkedin": "💼 LinkedIn Post Kopyala",
+        "copy_seo": "🎯 SEO Paketini Kopyala",
+        "copy_newsletter": "📧 Bülten Taslağını Kopyala",
+        "copied_msg": "Metin başarıyla panoya kopyalandı!"
     },
     "EN": {
         "title": "Medium Scraper & Multi-AI Editor Pro",
         "tab_scraper": "📥 Article Downloader",
         "tab_ai": "🤖 Multi-AI Editor & English Rewriter",
+        "tab_seo": "📊 SEO & Social Media Studio",
         "url_label": "Profile URL (@username), Article Link, or RSS:",
         "url_placeholder": "https://medium.com/@username or article URL",
         "batch_btn": "Select Batch File (.txt)",
@@ -75,12 +86,21 @@ TRANSLATIONS = {
         "select_file_warn": "Please enter a URL or select a batch file.",
         "key_saved_msg": "{provider} settings saved to config.json!",
         "key_missing_warn": "Please enter an API Key for {provider}.",
-        "no_art_selected_warn": "Please select an article to convert.",
+        "no_art_selected_warn": "Please select an article.",
         "ai_processing_msg": "[{provider} AI - {model}] Analyzing article, filling gaps, and rewriting in native English...\nPlease wait (10-30 seconds)...",
         "ai_saved_msg": "English article ({provider}) saved successfully:\n{filename}",
         "models_fetching": "[{provider}] Fetching live models from server...",
         "models_loaded": "{count} active models successfully loaded from {provider} API!",
-        "models_fetch_err": "Failed to fetch model list: {err}"
+        "models_fetch_err": "Failed to fetch model list: {err}",
+        "seo_btn": "✨ Generate SEO & Social Media Package for Selected Article",
+        "seo_processing_msg": "[{provider} AI - {model}] Generating SEO Meta Package, Twitter Thread, LinkedIn, Instagram & Newsletter draft...\nPlease wait...",
+        "seo_saved_msg": "SEO & Social Media Package ({provider}) saved successfully:\n{filename}",
+        "copy_all": "📋 Copy All",
+        "copy_twitter": "🐦 Copy Twitter Thread",
+        "copy_linkedin": "💼 Copy LinkedIn Post",
+        "copy_seo": "🎯 Copy SEO Package",
+        "copy_newsletter": "📧 Copy Newsletter Draft",
+        "copied_msg": "Text successfully copied to clipboard!"
     }
 }
 
