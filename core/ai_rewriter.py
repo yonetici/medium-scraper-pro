@@ -77,9 +77,11 @@ def parse_api_error_message(error_body: str, http_code: int) -> str:
             code = err.get("code", "") if isinstance(err, dict) else ""
 
             if "insufficient_balance" in str(code).lower() or "insufficient balance" in str(msg).lower():
-                return f"Bakiye Yetersiz (Insufficient Balance): DeepSeek hesabınızda bakiye bulunmuyor. Lütfen platform.deepseek.com adresinden bakiye yükleyin."
+                return "Bakiye Yetersiz (Insufficient Balance): DeepSeek/AI hesabınızda bakiye bulunmuyor. Lütfen sağlayıcı paneline girip bakiye yükleyin."
             if "invalid_api_key" in str(code).lower() or "authentication fails" in str(msg).lower() or http_code == 401:
-                return f"Geçersiz API Key (401): Girdiğiniz API Key doğrulamadan geçemedi. Lütfen API Anahtarınızı kontrol edin."
+                return "Geçersiz API Key (401 Auth Error): Girdiğiniz API Key doğrulamadan geçemedi. Lütfen API Anahtarınızı kontrol edin."
+            if "model_not_found" in str(code).lower() or "does not exist" in str(msg).lower() or "not found" in str(msg).lower():
+                return f"Model Bulunamadı: Sunucuda bu isimde bir model mevcut değil. Lütfen 'Modelleri Yükle' butonuna basarak geçerli modellerden birini seçin. Detay: {msg}"
             
             return f"API Hatası ({http_code}): {msg}"
     except Exception:
@@ -89,6 +91,8 @@ def parse_api_error_message(error_body: str, http_code: int) -> str:
         return "Geçersiz API Key (401 Auth Error). Lütfen API Key'inizi kontrol edin."
     if http_code == 402:
         return "Bakiye Yetersiz (402 Payment Required). Lütfen hesabınıza bakiye yükleyin."
+    if http_code == 400:
+        return f"Geçersiz İstek (400 Bad Request): Lütfen model ismini ve girdi parametrelerini kontrol edin. ({error_body[:150]})"
 
     return f"HTTP Hatası ({http_code}): {error_body[:200]}"
 
