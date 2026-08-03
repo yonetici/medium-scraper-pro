@@ -75,6 +75,7 @@ class ModernMediumScraperApp(BaseAppClass):
 
         self.tab_key_scraper = "TAB_SCRAPER"
         self.tab_key_ai = "TAB_AI"
+        self.show_api_key_state = False
 
         self.geometry("980x820")
         self.minsize(900, 720)
@@ -298,15 +299,29 @@ class ModernMediumScraperApp(BaseAppClass):
         self.api_key_label = ctk.CTkLabel(self.top_ai_frame, text="") if HAS_CTK else ctk.Label(self.top_ai_frame, text="")
         self.api_key_label.grid(row=1, column=0, padx=(15, 5), pady=(0, 10), sticky="w")
 
+        key_container = ctk.CTkFrame(self.top_ai_frame, fg_color="transparent") if HAS_CTK else ctk.Frame(self.top_ai_frame)
+        key_container.grid(row=1, column=1, padx=5, pady=(0, 10), sticky="ew")
+        key_container.grid_columnconfigure(0, weight=1)
+
         init_key = self.config_data.get("ai_provider_keys", {}).get(selected_prov, "")
         self.ai_api_key_var = ctk.StringVar(value=init_key)
         self.ai_api_key_entry = ctk.CTkEntry(
-            self.top_ai_frame,
+            key_container,
             textvariable=self.ai_api_key_var,
             placeholder_text="sk-...",
             show="*"
-        ) if HAS_CTK else ctk.Entry(self.top_ai_frame, textvariable=self.ai_api_key_var, show="*")
-        self.ai_api_key_entry.grid(row=1, column=1, padx=5, pady=(0, 10), sticky="ew")
+        ) if HAS_CTK else ctk.Entry(key_container, textvariable=self.ai_api_key_var, show="*")
+        self.ai_api_key_entry.grid(row=0, column=0, sticky="ew")
+
+        self.toggle_eye_btn = ctk.CTkButton(
+            key_container,
+            text="👁️",
+            width=35,
+            fg_color="gray30",
+            hover_color="gray40",
+            command=self.toggle_show_api_key
+        ) if HAS_CTK else ctk.Button(key_container, text="👁️", command=self.toggle_show_api_key)
+        self.toggle_eye_btn.grid(row=0, column=1, padx=(5, 0))
 
         # Fetch Models Button
         self.fetch_models_btn = ctk.CTkButton(
@@ -398,6 +413,14 @@ class ModernMediumScraperApp(BaseAppClass):
 
         self.refresh_ai_article_list()
 
+    def toggle_show_api_key(self):
+        self.show_api_key_state = not self.show_api_key_state
+        show_char = "" if self.show_api_key_state else "*"
+        if HAS_CTK:
+            self.ai_api_key_entry.configure(show=show_char)
+        else:
+            self.ai_api_key_entry.configure(show=show_char)
+
     # ---------------------------------------------------------------------------
     # UYGULAMA DİL GÜNCELLEMESİ (i18n)
     # ---------------------------------------------------------------------------
@@ -469,6 +492,25 @@ class ModernMediumScraperApp(BaseAppClass):
                     categories.append(p.name)
         return sorted(list(set(categories)))
 
+    def persist_ai_provider_config(self, provider: str, key_val: str, model_val: str):
+        """API Key ve model tercihlerini kalıcı olarak config.json dosyasına yazar."""
+        self.config_data["selected_ai_provider"] = provider
+        if "ai_provider_keys" not in self.config_data:
+            self.config_data["ai_provider_keys"] = {}
+        if "ai_provider_models" not in self.config_data:
+            self.config_data["ai_provider_models"] = {}
+
+        if key_val:
+            self.config_data["ai_provider_keys"][provider] = key_val
+        if model_val:
+            self.config_data["ai_provider_models"][provider] = model_val
+
+        try:
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(self.config_data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
     def on_ai_provider_changed(self, choice):
         provider = choice
         provider_keys = self.config_data.get("ai_provider_keys", {})
@@ -482,7 +524,6 @@ class ModernMediumScraperApp(BaseAppClass):
         self.ai_model_var.set(model_val)
         self.config_data["selected_ai_provider"] = provider
 
-        # Fallback models reset
         fallbacks = PROVIDERS_REGISTRY.get(provider, {}).get("fallback_models", [default_model])
         if HAS_CTK:
             self.ai_model_combo.configure(values=fallbacks)
@@ -493,11 +534,13 @@ class ModernMediumScraperApp(BaseAppClass):
     def fetch_and_update_models_async(self):
         provider = self.ai_provider_var.get().strip()
         api_key = self.ai_api_key_var.get().strip()
+        model_val = self.ai_model_var.get().strip()
 
         if not api_key:
             messagebox.showwarning("API Key Eksik", self.t("key_missing_warn").format(provider=provider))
             return
 
+        self.persist_ai_provider_config(provider, api_key, model_val)
         self.fetch_models_btn.configure(state="disabled")
 
         def _fetch_worker():
@@ -507,14 +550,16 @@ class ModernMediumScraperApp(BaseAppClass):
                     if HAS_CTK and models:
                         self.ai_model_combo.configure(values=models)
                         self.ai_model_var.set(models[0])
+                        self.persist_ai_provider_config(provider, api_key, models[0])
                     self.fetch_models_btn.configure(state="normal")
                     messagebox.showinfo("Başarılı / Success", self.t("models_loaded").format(count=len(models), provider=provider))
 
                 self.after(0, _update_ui)
             except Exception as e:
-                def _err_ui():
+                err_msg = str(e)
+                def _err_ui(msg=err_msg):
                     self.fetch_models_btn.configure(state="normal")
-                    messagebox.showerror("Hata / Error", self.t("models_fetch_err").format(err=str(e)))
+                    messagebox.showerror("Hata / Error", self.t("models_fetch_err").format(err=msg))
                 self.after(0, _err_ui)
 
         threading.Thread(target=_fetch_worker, daemon=True).start()
@@ -566,22 +611,9 @@ class ModernMediumScraperApp(BaseAppClass):
             messagebox.showwarning("Uyarı / Warning", self.t("key_missing_warn").format(provider=provider))
             return
 
-        self.config_data["selected_ai_provider"] = provider
-        if "ai_provider_keys" not in self.config_data:
-            self.config_data["ai_provider_keys"] = {}
-        if "ai_provider_models" not in self.config_data:
-            self.config_data["ai_provider_models"] = {}
-
-        self.config_data["ai_provider_keys"][provider] = key_val
-        self.config_data["ai_provider_models"][provider] = model_val
-
-        try:
-            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(self.config_data, f, ensure_ascii=False, indent=2)
-            messagebox.showinfo("Başarılı / Success", self.t("key_saved_msg").format(provider=provider))
-            self.fetch_and_update_models_async()
-        except Exception as e:
-            messagebox.showerror("Hata / Error", f"Kaydedilemedi / Error saving: {e}")
+        self.persist_ai_provider_config(provider, key_val, model_val)
+        messagebox.showinfo("Başarılı / Success", self.t("key_saved_msg").format(provider=provider))
+        self.fetch_and_update_models_async()
 
     def start_ai_rewrite_single(self):
         provider = self.ai_provider_var.get().strip()
@@ -597,6 +629,9 @@ class ModernMediumScraperApp(BaseAppClass):
         if selected_filename not in self.articles_cache:
             messagebox.showwarning("Makale Seçilmedi", self.t("no_art_selected_warn"))
             return
+
+        # Auto-persist key and model choices
+        self.persist_ai_provider_config(provider, api_key, model_name)
 
         file_path = self.articles_cache[selected_filename]
         self.ai_convert_btn.configure(state="disabled")
@@ -645,11 +680,12 @@ class ModernMediumScraperApp(BaseAppClass):
                 self.after(0, _update_ui_success)
 
             except Exception as err:
-                def _update_ui_error():
+                err_msg = str(err)
+                def _update_ui_error(msg=err_msg):
                     self.ai_output_preview.delete("1.0", "end")
-                    self.ai_output_preview.insert("1.0", f"[HATA] {provider} AI İşlem Başarısız / Failed:\n{err}")
+                    self.ai_output_preview.insert("1.0", f"[HATA] {provider} AI İşlem Başarısız / Failed:\n{msg}")
                     self.ai_convert_btn.configure(state="normal")
-                    messagebox.showerror("Hata / Error", str(err))
+                    messagebox.showerror("Hata / Error", msg)
 
                 self.after(0, _update_ui_error)
 
