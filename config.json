@@ -38,7 +38,7 @@
     "Custom": ""
   },
   "ai_provider_models": {
-    "DeepSeek": "deepseek-v4-pro",
+    "DeepSeek": "deepseek-v4-flash",
     "OpenAI": "gpt-4o-mini",
     "Gemini": "gemini-2.5-flash",
     "OpenRouter": "google/gemini-2.5-flash",

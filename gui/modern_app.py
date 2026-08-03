@@ -74,14 +74,15 @@ class ModernMediumScraperApp(BaseAppClass):
         self.batch_urls = []
         self.articles_cache = {}
         self.seo_articles_cache = {}
+        self.seo_package_sections = {}
 
         self.tab_key_scraper = "TAB_SCRAPER"
         self.tab_key_ai = "TAB_AI"
         self.tab_key_seo = "TAB_SEO"
         self.show_api_key_state = False
 
-        self.geometry("1020x860")
-        self.minsize(940, 740)
+        self.geometry("1060x880")
+        self.minsize(980, 760)
 
         self.setup_ui()
         self.apply_language()
@@ -421,7 +422,7 @@ class ModernMediumScraperApp(BaseAppClass):
         self.refresh_ai_article_list()
 
     # ---------------------------------------------------------------------------
-    # SEKME 3: SEO & SOSYAL MEDYA STUDIO
+    # SEKME 3: SEO & SOSYAL MEDYA STUDIO (MODERN UI ENHANCED)
     # ---------------------------------------------------------------------------
     def build_seo_social_tab(self):
         tab = self.tab_seo
@@ -474,59 +475,70 @@ class ModernMediumScraperApp(BaseAppClass):
             self.seo_orig_preview = st.ScrolledText(self.seo_left_frame, wrap="word", height=15)
             self.seo_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
 
-        # Right Panel (SEO & Social Generation)
+        # Right Panel (SEO & Social Generation Engine)
         self.seo_right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
         self.seo_right_frame.grid(row=0, column=1, rowspan=2, padx=(5, 15), pady=10, sticky="nsew")
         self.seo_right_frame.grid_columnconfigure(0, weight=1)
-        self.seo_right_frame.grid_rowconfigure(2, weight=1)
+        self.seo_right_frame.grid_rowconfigure(3, weight=1)
 
+        # Hero Action Button
         self.seo_generate_btn = ctk.CTkButton(
             self.seo_right_frame,
             text="",
-            font=ctk.CTkFont(size=13, weight="bold"),
+            font=ctk.CTkFont(size=14, weight="bold"),
             fg_color="#e67e22",
             hover_color="#d35400",
-            height=40,
+            height=44,
             command=self.start_seo_social_generation
         ) if HAS_CTK else ctk.Button(self.seo_right_frame, text="", command=self.start_seo_social_generation)
-        self.seo_generate_btn.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+        self.seo_generate_btn.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="ew")
 
-        # Quick Copy Bar
-        copy_bar = ctk.CTkFrame(self.seo_right_frame, fg_color="transparent") if HAS_CTK else ctk.Frame(self.seo_right_frame)
-        copy_bar.grid(row=1, column=0, padx=10, pady=(0, 8), sticky="ew")
-        copy_bar.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        # Interactive Sub-View Segmented Switcher Bar
+        self.subview_var = ctk.StringVar(value="view_all")
+        if HAS_CTK:
+            self.subview_segmented_btn = ctk.CTkSegmentedButton(
+                self.seo_right_frame,
+                values=["FULL", "SEO", "TWITTER", "LINKEDIN", "INSTAGRAM", "NEWSLETTER"],
+                command=self.on_seo_subview_changed
+            )
+            self.subview_segmented_btn.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+            self.subview_segmented_btn.set("FULL")
 
-        self.copy_all_btn = ctk.CTkButton(
-            copy_bar, text="📋 Copy All", height=28, fg_color="gray30", hover_color="gray40",
-            command=lambda: self.copy_to_clipboard(self.seo_output_preview.get("1.0", "end"))
-        ) if HAS_CTK else ctk.Button(copy_bar, text="📋 Copy All", command=lambda: self.copy_to_clipboard(self.seo_output_preview.get("1.0", "end")))
-        self.copy_all_btn.grid(row=0, column=0, padx=2, sticky="ew")
+        # Action Bar (Copy View & Export File)
+        action_bar = ctk.CTkFrame(self.seo_right_frame, fg_color="transparent") if HAS_CTK else ctk.Frame(self.seo_right_frame)
+        action_bar.grid(row=2, column=0, padx=10, pady=(2, 8), sticky="ew")
+        action_bar.grid_columnconfigure((0, 1), weight=1)
 
-        self.copy_twitter_btn = ctk.CTkButton(
-            copy_bar, text="🐦 Twitter Thread", height=28, fg_color="#1da1f2", hover_color="#0c85d0",
-            command=lambda: self.copy_section_to_clipboard("## 🐦 Twitter / X Thread")
-        ) if HAS_CTK else ctk.Button(copy_bar, text="🐦 Twitter Thread", command=lambda: self.copy_section_to_clipboard("## 🐦 Twitter / X Thread"))
-        self.copy_twitter_btn.grid(row=0, column=1, padx=2, sticky="ew")
+        self.copy_current_btn = ctk.CTkButton(
+            action_bar,
+            text="",
+            font=ctk.CTkFont(weight="bold"),
+            height=32,
+            fg_color="#27ae60",
+            hover_color="#219150",
+            command=self.copy_active_subview_to_clipboard
+        ) if HAS_CTK else ctk.Button(action_bar, text="", command=self.copy_active_subview_to_clipboard)
+        self.copy_current_btn.grid(row=0, column=0, padx=(0, 4), sticky="ew")
 
-        self.copy_linkedin_btn = ctk.CTkButton(
-            copy_bar, text="💼 LinkedIn Post", height=28, fg_color="#0077b5", hover_color="#005885",
-            command=lambda: self.copy_section_to_clipboard("## 💼 LinkedIn Article Post")
-        ) if HAS_CTK else ctk.Button(copy_bar, text="💼 LinkedIn Post", command=lambda: self.copy_section_to_clipboard("## 💼 LinkedIn Article Post"))
-        self.copy_linkedin_btn.grid(row=0, column=2, padx=2, sticky="ew")
+        self.export_file_btn = ctk.CTkButton(
+            action_bar,
+            text="",
+            font=ctk.CTkFont(weight="bold"),
+            height=32,
+            fg_color="#2980b9",
+            hover_color="#1f618d",
+            command=self.export_seo_social_file
+        ) if HAS_CTK else ctk.Button(action_bar, text="", command=self.export_seo_social_file)
+        self.export_file_btn.grid(row=0, column=1, padx=(4, 0), sticky="ew")
 
-        self.copy_seo_btn = ctk.CTkButton(
-            copy_bar, text="🎯 SEO Package", height=28, fg_color="#27ae60", hover_color="#219150",
-            command=lambda: self.copy_section_to_clipboard("## 🎯 SEO & Metadata Package")
-        ) if HAS_CTK else ctk.Button(copy_bar, text="🎯 SEO Package", command=lambda: self.copy_section_to_clipboard("## 🎯 SEO & Metadata Package"))
-        self.copy_seo_btn.grid(row=0, column=3, padx=2, sticky="ew")
-
+        # Dynamic Output Preview
         if HAS_CTK:
             self.seo_output_preview = ctk.CTkTextbox(self.seo_right_frame, font=ctk.CTkFont(size=12))
-            self.seo_output_preview.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="nsew")
+            self.seo_output_preview.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="nsew")
         else:
             import tkinter.scrolledtext as st
             self.seo_output_preview = st.ScrolledText(self.seo_right_frame, wrap="word", height=15)
-            self.seo_output_preview.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="nsew")
+            self.seo_output_preview.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="nsew")
 
         self.refresh_seo_article_list()
 
@@ -606,10 +618,8 @@ class ModernMediumScraperApp(BaseAppClass):
         self.seo_refresh_btn.configure(text=self.t("refresh_btn"))
         self.seo_art_label.configure(text=self.t("article_label"))
         self.seo_generate_btn.configure(text=self.t("seo_btn"))
-        self.copy_all_btn.configure(text=self.t("copy_all"))
-        self.copy_twitter_btn.configure(text=self.t("copy_twitter"))
-        self.copy_linkedin_btn.configure(text=self.t("copy_linkedin"))
-        self.copy_seo_btn.configure(text=self.t("copy_seo"))
+        self.copy_current_btn.configure(text=self.t("copy_current"))
+        self.export_file_btn.configure(text=self.t("export_file"))
 
         self.refresh_ai_article_list()
         self.refresh_seo_article_list()
@@ -824,7 +834,7 @@ class ModernMediumScraperApp(BaseAppClass):
 
         t = threading.Thread(target=_worker, daemon=True).start()
 
-    # SEKME 3 LOGIC
+    # SEKME 3 LOGIC & SUBVIEW FILTERING
     def on_seo_category_change(self, choice=None):
         self.refresh_seo_article_list()
 
@@ -859,26 +869,78 @@ class ModernMediumScraperApp(BaseAppClass):
                     content = f.read()
                 self.seo_orig_preview.delete("1.0", "end")
                 self.seo_orig_preview.insert("1.0", content[:3000] + ("\n\n... (devamı var)" if len(content) > 3000 else ""))
+
+                # Check if a _social.md version already exists
+                cat = self.seo_category_var.get().strip() or "genel"
+                social_file = (MAKALELER_DIR / cat) / f"{file_path.stem}_social.md"
+                if social_file.exists():
+                    with open(social_file, "r", encoding="utf-8") as sf:
+                        social_text = sf.read()
+                    self.parse_and_store_seo_package(social_text)
+                    self.display_active_seo_subview()
             except Exception as e:
                 self.seo_orig_preview.delete("1.0", "end")
                 self.seo_orig_preview.insert("1.0", f"Dosya okunamadı: {e}")
 
-    def copy_to_clipboard(self, text: str):
-        if not text.strip():
+    def parse_and_store_seo_package(self, full_text: str):
+        """Çıkan tam raporu bölümlere ayırır."""
+        self.seo_package_sections = {"FULL": full_text}
+
+        section_headers = {
+            "SEO": "## 🎯 SEO & Metadata Package",
+            "TWITTER": "## 🐦 Twitter / X Thread",
+            "LINKEDIN": "## 💼 LinkedIn Article Post",
+            "INSTAGRAM": "## 📸 Instagram & Threads Caption",
+            "NEWSLETTER": "## 📧 Newsletter Draft"
+        }
+
+        for key, header in section_headers.items():
+            if header in full_text:
+                parts = full_text.split(header)
+                if len(parts) > 1:
+                    body = parts[1].split("\n## ")[0].strip()
+                    self.seo_package_sections[key] = f"{header}\n\n{body}"
+            else:
+                self.seo_package_sections[key] = f"{header}\n\n(Bu bölüm bulunamadı / Not generated)"
+
+    def on_seo_subview_changed(self, choice: str):
+        self.display_active_seo_subview()
+
+    def display_active_seo_subview(self):
+        choice = self.subview_segmented_btn.get() if HAS_CTK else "FULL"
+        text_to_show = self.seo_package_sections.get(choice, self.seo_package_sections.get("FULL", ""))
+
+        self.seo_output_preview.delete("1.0", "end")
+        if text_to_show:
+            self.seo_output_preview.insert("1.0", text_to_show)
+        else:
+            self.seo_output_preview.insert("1.0", self.t("seo_btn"))
+
+    def copy_active_subview_to_clipboard(self):
+        text = self.seo_output_preview.get("1.0", "end").strip()
+        if not text:
             return
         self.clipboard_clear()
-        self.clipboard_append(text.strip())
+        self.clipboard_append(text)
         messagebox.showinfo("Kopyalandı / Copied", self.t("copied_msg"))
 
-    def copy_section_to_clipboard(self, section_header: str):
-        full_text = self.seo_output_preview.get("1.0", "end")
-        if section_header in full_text:
-            parts = full_text.split(section_header)
-            if len(parts) > 1:
-                section_body = parts[1].split("\n## ")[0].strip()
-                self.copy_to_clipboard(f"{section_header}\n\n{section_body}")
-                return
-        self.copy_to_clipboard(full_text)
+    def export_seo_social_file(self):
+        text = self.seo_output_preview.get("1.0", "end").strip()
+        if not text:
+            return
+        
+        file_path = filedialog.asksaveasfilename(
+            title="SEO & Social Package Kaydet / Save File",
+            defaultextension=".md",
+            filetypes=[("Markdown Files", "*.md"), ("Text Files", "*.txt")]
+        )
+        if file_path:
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(text)
+                messagebox.showinfo("Başarılı / Success", f"Dosya kaydedildi: {Path(file_path).name}")
+            except Exception as e:
+                messagebox.showerror("Hata / Error", f"Kaydedilemedi: {e}")
 
     def start_seo_social_generation(self):
         provider = self.ai_provider_var.get().strip()
@@ -936,8 +998,10 @@ class ModernMediumScraperApp(BaseAppClass):
                     f.write(social_package_md)
 
                 def _update_ui_success():
-                    self.seo_output_preview.delete("1.0", "end")
-                    self.seo_output_preview.insert("1.0", f"--- SAVED ({provider}): {cat}/{social_filename} ---\n\n" + social_package_md)
+                    self.parse_and_store_seo_package(social_package_md)
+                    if HAS_CTK:
+                        self.subview_segmented_btn.set("FULL")
+                    self.display_active_seo_subview()
                     self.seo_generate_btn.configure(state="normal")
                     messagebox.showinfo("Başarılı / Success", self.t("seo_saved_msg").format(provider=provider, filename=f"{cat}/{social_filename}"))
 

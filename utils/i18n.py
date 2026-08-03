@@ -43,15 +43,19 @@ TRANSLATIONS = {
         "models_fetching": "[{provider}] Canlı modeller sunucudan çekiliyor...",
         "models_loaded": "{count} adet aktif model {provider} API üzerinden başarıyla yüklendi!",
         "models_fetch_err": "Model listesi çekilemedi: {err}",
-        "seo_btn": "✨ Seçili Makale İçin SEO & Sosyal Medya İçerikleri Üret",
+        "seo_btn": "🚀 Seçili Makale İçin SEO & Sosyal Medya İçeriklerini Üret",
         "seo_processing_msg": "[{provider} AI - {model}] SEO Meta paketleri, Twitter Thread, LinkedIn, Instagram ve Bülten yazısı üretiliyor...\nLütfen bekleyin...",
         "seo_saved_msg": "SEO & Sosyal Medya Paketi ({provider}) kaydedildi:\n{filename}",
         "copy_all": "📋 Tümünü Kopyala",
-        "copy_twitter": "🐦 Twitter Thread Kopyala",
-        "copy_linkedin": "💼 LinkedIn Post Kopyala",
-        "copy_seo": "🎯 SEO Paketini Kopyala",
-        "copy_newsletter": "📧 Bülten Taslağını Kopyala",
-        "copied_msg": "Metin başarıyla panoya kopyalandı!"
+        "copy_current": "📋 Seçili Görünümü Kopyala",
+        "export_file": "💾 Dosyaya Kaydet",
+        "view_all": "📄 Tüm Rapor",
+        "view_seo": "🎯 SEO Paket",
+        "view_twitter": "🐦 Twitter Thread",
+        "view_linkedin": "💼 LinkedIn Post",
+        "view_instagram": "📸 Instagram",
+        "view_newsletter": "📧 Newsletter",
+        "copied_msg": "Seçilen içerik başarıyla panoya kopyalandı!"
     },
     "EN": {
         "title": "Medium Scraper & Multi-AI Editor Pro",
@@ -92,15 +96,19 @@ TRANSLATIONS = {
         "models_fetching": "[{provider}] Fetching live models from server...",
         "models_loaded": "{count} active models successfully loaded from {provider} API!",
         "models_fetch_err": "Failed to fetch model list: {err}",
-        "seo_btn": "✨ Generate SEO & Social Media Package for Selected Article",
+        "seo_btn": "🚀 Generate SEO & Social Media Package for Selected Article",
         "seo_processing_msg": "[{provider} AI - {model}] Generating SEO Meta Package, Twitter Thread, LinkedIn, Instagram & Newsletter draft...\nPlease wait...",
         "seo_saved_msg": "SEO & Social Media Package ({provider}) saved successfully:\n{filename}",
         "copy_all": "📋 Copy All",
-        "copy_twitter": "🐦 Copy Twitter Thread",
-        "copy_linkedin": "💼 Copy LinkedIn Post",
-        "copy_seo": "🎯 Copy SEO Package",
-        "copy_newsletter": "📧 Copy Newsletter Draft",
-        "copied_msg": "Text successfully copied to clipboard!"
+        "copy_current": "📋 Copy Selected View",
+        "export_file": "💾 Save to File",
+        "view_all": "📄 Full Report",
+        "view_seo": "🎯 SEO Package",
+        "view_twitter": "🐦 Twitter Thread",
+        "view_linkedin": "💼 LinkedIn Post",
+        "view_instagram": "📸 Instagram",
+        "view_newsletter": "📧 Newsletter",
+        "copied_msg": "Selected content successfully copied to clipboard!"
     }
 }
 
