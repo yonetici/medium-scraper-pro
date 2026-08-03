@@ -1,0 +1,5 @@
+customtkinter>=6.0.0
+pillow>=10.0.0
+aiohttp>=3.9.0
+beautifulsoup4>=4.12.0
+html2text>=2024.0.0

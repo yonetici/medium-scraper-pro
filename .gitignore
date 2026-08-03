@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Downloaded articles output (keep directory via .gitkeep)
+articles/*
+!articles/.gitkeep
+
+# Operating System
+.DS_Store
+Thumbs.db

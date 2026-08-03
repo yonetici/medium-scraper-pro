@@ -1,0 +1,17 @@
+{
+  "default_output_dir": "articles",
+  "default_category": "genel",
+  "download_images": false,
+  "max_concurrent_threads": 5,
+  "proxies": [
+    "https://freedium.to/",
+    "https://readmedium.com/"
+  ],
+  "request_timeout": 20,
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "skip_keywords": [
+    "OpenAI", "o1 chat", "o1 API", "Terms of Service", "Privacy Policy",
+    "Read Medium articles with AI", "read medium", "articles with ai",
+    "sign up", "log in", "subscribe", "become a member"
+  ]
+}
