@@ -5,20 +5,24 @@
 [![GUI: CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-blueviolet.svg)](https://github.com/TomSchimansky/CustomTkinter)
 [![AI: DeepSeek](https://img.shields.io/badge/AI-DeepSeek_v3-deepskyblue.svg)](https://www.deepseek.com/)
 
-A powerful, high-performance **Medium Article Scraper & AI Content Editor** built with Python and CustomTkinter. It scrapes Medium articles/profiles, archives images locally, and integrates with **DeepSeek API** to perform deep content analysis, identify missing architectural/technical gaps, expand upon best practices, and rewrite articles into high-quality native English Markdown.
+A powerful, high-performance **Medium Article Scraper & AI Content Editor** built with Python and CustomTkinter. Features a sleek **Tabbed Desktop Interface** to scrape Medium articles/profiles, archive images locally, select downloaded articles, analyze gaps, expand technical depth, and rewrite them into native English Markdown via **DeepSeek API**.
 
 ---
 
-## ✨ Key Features
+## ✨ Features & Interface Architecture
 
-- 🧠 **DeepSeek AI Content Rewrite & Expansion**: Not just translation! Analyzes articles for weaknesses/gaps, expands them with technical depth and best practices, and rewrites them into fluent native English Markdown.
-- 🎨 **Modern Dark Mode GUI**: Built using `CustomTkinter` for a sleek desktop experience with masked API key inputs.
-- ⚡ **Multi-Threaded Batch Scraping**: Concurrently scrape multiple articles using Python's `ThreadPoolExecutor`.
-- 🔄 **Proxy Fallback Pipeline**: Bypasses paywalls and DNS blocks using a multi-stage proxy strategy (`Freedium` -> `ReadMedium` -> `Direct`).
-- 🖼️ **Local Image Archiving**: Automatically downloads images inside articles to a local `images/` directory and converts remote URLs into relative local paths.
-- 📝 **Syntax Highlighting & Rich Markdown**: Preserves programming code block languages (`python`, `javascript`, `cpp`, etc.) during HTML-to-Markdown conversion.
-- 📊 **Metadata Extraction**: Extracts OpenGraph and JSON-LD schema metadata (`title`, `author`, `date`, `original_url`, `tags`).
-- 📁 **Multiple Output Formats**: Export articles as **Markdown (`.md`)** with YAML Frontmatter, **Plain Text (`.txt`)**, or **JSON (`.json`)**.
+### 📌 Tab 1: 📥 Makale İndirici (Scraper & Downloader)
+- **Flexible Inputs**: Scrape single article URLs, Medium user handles (e.g. `@welifiliz`), RSS feeds, or batch URL text files (`.txt`).
+- **Proxy Fallback Pipeline**: Automatically bypasses paywalls and DNS blocks (`Freedium` -> `ReadMedium` -> `Direct`).
+- **Multi-Threaded Scraping**: Fast concurrent downloads using Python's `ThreadPoolExecutor`.
+- **Local Image Archiving**: Automatically downloads images to `articles/<category>/images/` and converts links to relative local paths (`./images/img_...`).
+- **Syntax Highlighting & Rich Formatting**: Preserves code block language tags (`python`, `javascript`, `cpp`, etc.) during HTML-to-Markdown conversion.
+
+### 📌 Tab 2: 🤖 AI Editor & İngilizce Yeniden Yazım (DeepSeek Converter)
+- **Local Article Browser & Selector**: Browse downloaded articles across local category subfolders with a live preview.
+- **DeepSeek AI Content Rewrite & Expansion**: Analyzes the selected article, identifies missing architectural/technical gaps, expands upon modern best practices, and rewrites it into fluent native English Markdown.
+- **Masked API Key Management**: Safely stores your DeepSeek API key in `config.json`.
+- **Live Side-by-Side Preview**: Displays both the original text and the generated English article inside the GUI.
 
 ---
 
@@ -41,18 +45,14 @@ A powerful, high-performance **Medium Article Scraper & AI Content Editor** buil
 
 ### 1. Graphical User Interface (GUI)
 
-Launch the desktop interface simply by running:
+Launch the tabbed desktop app simply by running:
 
 ```bash
 python mediumParse.py
 ```
 
-GUI Highlights:
-- Enter single article URL or Medium user handle (e.g. `@welifiliz`).
-- Select a batch `.txt` file containing multiple URLs.
-- Toggle **"DeepSeek AI ile İçeriği Analiz Et, Eksikleri Tamamla ve İngilizce Yaz"**.
-- Enter & save your DeepSeek API Key.
-- Monitor real-time logs and open output folder with one click.
+- Use **Sekme 1 (Makale İndirici)** to download Medium articles to `articles/`.
+- Switch to **Sekme 2 (AI Editor)** to pick any downloaded article, enter your DeepSeek API Key, and click **"✨ Seçili Makaleyi DeepSeek ile Geliştir & İngilizce Yaz"**.
 
 ---
 
@@ -67,18 +67,6 @@ python mediumParse.py -u "https://medium.com/@welifiliz/kurumsal-d%C3%BCnyada-re
 ```bash
 python mediumParse.py -b urls.txt -c python_articles -f json -t 8 --download-images
 ```
-
-#### CLI Parameters
-| Flag | Long Flag | Description | Default |
-|---|---|---|---|
-| `-u` | `--url` | Target Medium article or profile URL | `None` |
-| `-b` | `--batch` | Text file containing list of URLs | `None` |
-| `-c` | `--category` | Category subfolder inside `articles/` | `genel` |
-| `-f` | `--format` | Output format (`md`, `txt`, `json`) | `md` |
-| `--download-images` | | Download remote images locally | `False` |
-| `--rewrite-en` | | Analyze, expand, and rewrite in English using DeepSeek AI | `False` |
-| `--api-key` | | DeepSeek API Key (`sk-...`) | `None` |
-| `-t` | `--threads` | Number of concurrent threads | `5` |
 
 ---
 
