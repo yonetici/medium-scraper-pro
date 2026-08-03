@@ -3,11 +3,15 @@
   "default_category": "genel",
   "download_images": false,
   "max_concurrent_threads": 5,
+  "enable_ai_rewrite": false,
+  "deepseek_api_key": "",
+  "deepseek_model": "deepseek-chat",
+  "deepseek_temperature": 0.7,
   "proxies": [
     "https://freedium.to/",
     "https://readmedium.com/"
   ],
-  "request_timeout": 20,
+  "request_timeout": 30,
   "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   "skip_keywords": [
     "OpenAI", "o1 chat", "o1 API", "Terms of Service", "Privacy Policy",

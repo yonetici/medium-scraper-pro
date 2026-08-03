@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Medium Makale & İçerik İndirici (SEO/GEO Uyumlu & Modüler Yapı)
+Medium Makale İndirici & DeepSeek AI Editor Pro (SEO/GEO Uyumlu & Modüler Yapı)
 
 CLI Kullanımı:
     python mediumParse.py -u "https://medium.com/@welifiliz" -c genel -f md --download-images
+    python mediumParse.py -u "https://medium.com/@welifiliz" --rewrite-en --api-key "sk-..."
     python mediumParse.py --batch sample-urls.txt -c python -f json -t 8
 
 GUI Kullanımı:
@@ -18,6 +19,7 @@ from pathlib import Path
 from core.scraper import MediumScraperCore
 from core.image_downloader import localize_markdown_images
 from core.parser import build_markdown_with_frontmatter
+from core.ai_rewriter import DeepSeekRewriter
 from utils.helpers import (
     ROOT, load_config, generate_unique_filename,
     is_article_url, is_profile_url
@@ -29,17 +31,22 @@ MAKALELER_DIR.mkdir(parents=True, exist_ok=True)
 
 def run_cli(args):
     """Komut satırı (CLI) üzerinden çalıştırma işlevi."""
-    print("=" * 60)
-    print("Medium Scraper CLI Motoru Başlatılıyor...")
-    print("=" * 60)
+    print("=" * 65)
+    print("Medium Scraper & DeepSeek AI Editor CLI Motoru Başlatılıyor...")
+    print("=" * 65)
 
     scraper = MediumScraperCore()
     category = args.category or "genel"
     output_format = args.format or "md"
     download_imgs = args.download_images
-    max_threads = args.threads or 5
+    rewrite_en = args.rewrite_en
+    api_key = args.api_key
     category_dir = MAKALELER_DIR / category
     category_dir.mkdir(parents=True, exist_ok=True)
+
+    rewriter = None
+    if rewrite_en:
+        rewriter = DeepSeekRewriter(api_key=api_key)
 
     urls_to_process = []
 
@@ -118,26 +125,39 @@ def run_cli(args):
 
         print(f"  [+] Kaydedildi: {file_path}")
 
+        # DeepSeek AI Rewrite
+        if rewrite_en and rewriter:
+            print(f"  [DeepSeek AI] Makale analiz ediliyor ve İngilizceye geliştirilerek yeniden yazılıyor...")
+            try:
+                rewritten_md = rewriter.rewrite_and_expand_article(markdown_content, metadata)
+                en_filename = generate_unique_filename(f"{title}_en", orig_url, extension="md")
+                en_file_path = category_dir / en_filename
+                with open(en_file_path, "w", encoding="utf-8") as f:
+                    f.write(rewritten_md)
+                print(f"  [+] [DeepSeek AI EN] Kaydedildi: {en_file_path}")
+            except Exception as ai_err:
+                print(f"  [HATA - DeepSeek AI] {ai_err}")
+
     print("\n[BAŞARILI] CLI işlemi tamamlandı!")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Medium Makale & İçerik İndirici (SEO/GEO Ready)")
+    parser = argparse.ArgumentParser(description="Medium Makale İndirici & DeepSeek AI Editor Pro")
     parser.add_argument("-u", "--url", type=str, help="Medium Makale veya Profil URL'si (@kullanici)")
     parser.add_argument("-b", "--batch", type=str, help="Toplu URL listesi içeren metin dosyası (.txt)")
     parser.add_argument("-c", "--category", type=str, default="genel", help="Kayıt kategorisi/klasörü")
     parser.add_argument("-f", "--format", type=str, choices=["md", "txt", "json"], default="md", help="Çıktı formatı")
     parser.add_argument("--download-images", action="store_true", help="Görselleri yerel images/ dizinine indir")
+    parser.add_argument("--rewrite-en", action="store_true", help="DeepSeek AI ile İngilizceye geliştirerek yeniden yaz")
+    parser.add_argument("--api-key", type=str, help="DeepSeek API Key")
     parser.add_argument("-t", "--threads", type=int, default=5, help="Çoklu iş parçacığı sayısı")
     parser.add_argument("--gui", action="store_true", help="Arayüzü (GUI) başlat")
 
     args = parser.parse_args()
 
-    # Eğer komut satırı argümanı verilmişse CLI modunda çalış
     if args.url or args.batch:
         run_cli(args)
     else:
-        # Argüman yoksa GUI başlat
         from gui.modern_app import ModernMediumScraperApp
         app = ModernMediumScraperApp()
         app.mainloop()

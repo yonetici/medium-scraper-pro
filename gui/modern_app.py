@@ -22,12 +22,12 @@ try:
 except Exception:
     HAS_TKINTER = False
 
-
+from core.ai_rewriter import DeepSeekRewriter
 from core.image_downloader import localize_markdown_images
 from core.parser import build_markdown_with_frontmatter
 from core.scraper import MediumScraperCore
 from utils.helpers import (
-    ROOT, load_config, generate_unique_filename,
+    ROOT, CONFIG_PATH, load_config, generate_unique_filename,
     is_article_url, is_profile_url
 )
 
@@ -65,10 +65,9 @@ class ModernMediumScraperApp(BaseAppClass):
             raise RuntimeError("Tkinter/CustomTkinter kütüphanesi bu Python ortamında yüklü değil. Lütfen CLI modunu kullanın (ör: python mediumParse.py -u <URL>).")
         super().__init__()
 
-
-        self.title("Medium Makale & İçerik İndirici (SEO/GEO Ready)")
-        self.geometry("780x720")
-        self.minsize(720, 640)
+        self.title("Medium Makale İndirici & DeepSeek AI Editor Pro")
+        self.geometry("820x780")
+        self.minsize(760, 680)
 
         self.config_data = load_config()
         self.msg_queue = queue.Queue()
@@ -79,19 +78,19 @@ class ModernMediumScraperApp(BaseAppClass):
 
     def setup_ui(self):
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(5, weight=1)
 
         # 1. Başlık & Banner
         title_label = ctk.CTkLabel(
             self,
-            text="Medium Makale & Profil İndirici",
+            text="Medium Makale İndirici & DeepSeek AI Editor Pro",
             font=ctk.CTkFont(size=22, weight="bold")
-        ) if HAS_CTK else ctk.Label(self, text="Medium Makale & Profil İndirici", font=("Arial", 18, "bold"))
+        ) if HAS_CTK else ctk.Label(self, text="Medium Makale İndirici & DeepSeek AI Editor", font=("Arial", 18, "bold"))
         title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
 
         # 2. Girdi Alanı (URL veya Toplu Dosya)
         input_frame = ctk.CTkFrame(self) if HAS_CTK else ctk.LabelFrame(self, text="Girdi")
-        input_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        input_frame.grid(row=1, column=0, padx=20, pady=5, sticky="ew")
         input_frame.grid_columnconfigure(0, weight=1)
 
         url_label = ctk.CTkLabel(
@@ -123,16 +122,16 @@ class ModernMediumScraperApp(BaseAppClass):
             text_color="gray",
             font=ctk.CTkFont(size=11)
         ) if HAS_CTK else ctk.Label(input_frame, text="")
-        self.batch_status_label.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 10), sticky="w")
+        self.batch_status_label.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 8), sticky="w")
 
-        # 3. Ayarlar (Format, Kategori, Görsel İndirme, Threads)
+        # 3. İndirme ve İlerleme Ayarları
         settings_frame = ctk.CTkFrame(self) if HAS_CTK else ctk.LabelFrame(self, text="Ayarlar")
         settings_frame.grid(row=2, column=0, padx=20, pady=5, sticky="ew")
         settings_frame.grid_columnconfigure((1, 3), weight=1)
 
         # Kategori
         cat_label = ctk.CTkLabel(settings_frame, text="Kategori Klasörü:") if HAS_CTK else ctk.Label(settings_frame, text="Kategori:")
-        cat_label.grid(row=0, column=0, padx=(15, 5), pady=12, sticky="w")
+        cat_label.grid(row=0, column=0, padx=(15, 5), pady=8, sticky="w")
 
         self.category_var = ctk.StringVar(value="genel")
         self.category_combo = ctk.CTkComboBox(
@@ -140,11 +139,11 @@ class ModernMediumScraperApp(BaseAppClass):
             variable=self.category_var,
             values=self.get_local_categories()
         ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.category_var)
-        self.category_combo.grid(row=0, column=1, padx=5, pady=12, sticky="ew")
+        self.category_combo.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
 
         # Format
         fmt_label = ctk.CTkLabel(settings_frame, text="Çıktı Formatı:") if HAS_CTK else ctk.Label(settings_frame, text="Format:")
-        fmt_label.grid(row=0, column=2, padx=(15, 5), pady=12, sticky="w")
+        fmt_label.grid(row=0, column=2, padx=(15, 5), pady=8, sticky="w")
 
         self.format_var = ctk.StringVar(value="md")
         self.format_combo = ctk.CTkOptionMenu(
@@ -152,7 +151,7 @@ class ModernMediumScraperApp(BaseAppClass):
             variable=self.format_var,
             values=["md", "txt", "json"]
         ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.format_var)
-        self.format_combo.grid(row=0, column=3, padx=(5, 15), pady=12, sticky="ew")
+        self.format_combo.grid(row=0, column=3, padx=(5, 15), pady=8, sticky="ew")
 
         # Görselleri Yerel İndir
         self.download_images_var = ctk.BooleanVar(value=self.config_data.get("download_images", False))
@@ -161,11 +160,11 @@ class ModernMediumScraperApp(BaseAppClass):
             text="Görselleri Yerel Dizine İndir (images/)",
             variable=self.download_images_var
         ) if HAS_CTK else ctk.Checkbutton(settings_frame, text="Görselleri İndir", variable=self.download_images_var)
-        self.img_switch.grid(row=1, column=0, columnspan=2, padx=15, pady=(0, 12), sticky="w")
+        self.img_switch.grid(row=1, column=0, columnspan=2, padx=15, pady=(0, 8), sticky="w")
 
         # Eşzamanlı İş Parçacığı (Threads)
         threads_label = ctk.CTkLabel(settings_frame, text="Eşzamanlı İş Parçacığı:") if HAS_CTK else ctk.Label(settings_frame, text="Threads:")
-        threads_label.grid(row=1, column=2, padx=(15, 5), pady=(0, 12), sticky="w")
+        threads_label.grid(row=1, column=2, padx=(15, 5), pady=(0, 8), sticky="w")
 
         self.threads_var = ctk.StringVar(value=str(self.config_data.get("max_concurrent_threads", 5)))
         self.threads_combo = ctk.CTkOptionMenu(
@@ -173,11 +172,37 @@ class ModernMediumScraperApp(BaseAppClass):
             variable=self.threads_var,
             values=["1", "2", "3", "5", "8", "10"]
         ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.threads_var)
-        self.threads_combo.grid(row=1, column=3, padx=(5, 15), pady=(0, 12), sticky="ew")
+        self.threads_combo.grid(row=1, column=3, padx=(5, 15), pady=(0, 8), sticky="ew")
 
-        # 4. Çalıştırma & İlerleme Alanı
+        # 4. DeepSeek AI Yeniden Yazım Ayarları (AI Rewrite & Expansion)
+        ai_frame = ctk.CTkFrame(self) if HAS_CTK else ctk.LabelFrame(self, text="DeepSeek AI Editor")
+        ai_frame.grid(row=3, column=0, padx=20, pady=5, sticky="ew")
+        ai_frame.grid_columnconfigure(1, weight=1)
+
+        self.enable_ai_var = ctk.BooleanVar(value=self.config_data.get("enable_ai_rewrite", False))
+        self.ai_switch = ctk.CTkSwitch(
+            ai_frame,
+            text="DeepSeek AI ile İçeriği Analiz Et, Eksikleri Tamamla ve İngilizce Yaz (Rewrite & Expand)",
+            variable=self.enable_ai_var,
+            font=ctk.CTkFont(weight="bold")
+        ) if HAS_CTK else ctk.Checkbutton(ai_frame, text="DeepSeek ile İngilizce Yeniden Yaz", variable=self.enable_ai_var)
+        self.ai_switch.grid(row=0, column=0, columnspan=2, padx=15, pady=(10, 5), sticky="w")
+
+        key_label = ctk.CTkLabel(ai_frame, text="DeepSeek API Key:") if HAS_CTK else ctk.Label(ai_frame, text="API Key:")
+        key_label.grid(row=1, column=0, padx=(15, 5), pady=(0, 10), sticky="w")
+
+        self.api_key_var = ctk.StringVar(value=self.config_data.get("deepseek_api_key", ""))
+        self.api_key_entry = ctk.CTkEntry(
+            ai_frame,
+            textvariable=self.api_key_var,
+            placeholder_text="sk-...",
+            show="*"
+        ) if HAS_CTK else ctk.Entry(ai_frame, textvariable=self.api_key_var, show="*")
+        self.api_key_entry.grid(row=1, column=1, padx=(5, 15), pady=(0, 10), sticky="ew")
+
+        # 5. Çalıştırma & İlerleme Alanı
         action_frame = ctk.CTkFrame(self, fg_color="transparent") if HAS_CTK else ctk.Frame(self)
-        action_frame.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
+        action_frame.grid(row=4, column=0, padx=20, pady=8, sticky="ew")
         action_frame.grid_columnconfigure(0, weight=1)
 
         self.fetch_btn = ctk.CTkButton(
@@ -204,9 +229,9 @@ class ModernMediumScraperApp(BaseAppClass):
             self.progress_bar.grid(row=1, column=0, columnspan=2, pady=(10, 0), sticky="ew")
             self.progress_bar.set(0)
 
-        # 5. İşlem Günlüğü (Log)
+        # 6. İşlem Günlüğü (Log)
         log_frame = ctk.CTkFrame(self) if HAS_CTK else ctk.LabelFrame(self, text="Log")
-        log_frame.grid(row=4, column=0, padx=20, pady=(5, 15), sticky="nsew")
+        log_frame.grid(row=5, column=0, padx=20, pady=(5, 15), sticky="nsew")
         log_frame.grid_columnconfigure(0, weight=1)
         log_frame.grid_rowconfigure(0, weight=1)
 
@@ -245,27 +270,29 @@ class ModernMediumScraperApp(BaseAppClass):
             except Exception as e:
                 messagebox.showerror("Hata", f"Toplu dosya okunamadı: {e}")
 
+    def save_api_key_to_config(self, key_val: str, enable_ai: bool):
+        """DeepSeek API Key ve AI anahtar tercihini config.json dosyasına kaydeder."""
+        try:
+            self.config_data["deepseek_api_key"] = key_val
+            self.config_data["enable_ai_rewrite"] = enable_ai
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(self.config_data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
     def log_direct(self, message: str):
         timestamp = datetime.now().strftime("%H:%M:%S")
         text = f"[{timestamp}] {message}\n"
-        if HAS_CTK:
-            self.log_area.insert("end", text)
-            self.log_area.see("end")
-        else:
-            self.log_area.insert("end", text)
-            self.log_area.see("end")
+        self.log_area.insert("end", text)
+        self.log_area.see("end")
 
     def poll_queue(self):
         try:
             while True:
                 msg_type, payload = self.msg_queue.get_nowait()
                 if msg_type == "log":
-                    if HAS_CTK:
-                        self.log_area.insert("end", payload)
-                        self.log_area.see("end")
-                    else:
-                        self.log_area.insert("end", payload)
-                        self.log_area.see("end")
+                    self.log_area.insert("end", payload)
+                    self.log_area.see("end")
                 elif msg_type == "progress" and self.progress_bar:
                     self.progress_bar.set(payload)
                 elif msg_type == "done":
@@ -294,6 +321,15 @@ class ModernMediumScraperApp(BaseAppClass):
         output_format = self.format_var.get().strip() or "md"
         download_imgs = self.download_images_var.get()
         max_threads = int(self.threads_var.get() or 5)
+        enable_ai = self.enable_ai_var.get()
+        api_key = self.api_key_var.get().strip()
+
+        if enable_ai and not api_key:
+            messagebox.showwarning("DeepSeek API Key Eksik", "Lütfen DeepSeek API Key girin.")
+            return
+
+        if api_key:
+            self.save_api_key_to_config(api_key, enable_ai)
 
         if not target_input and not self.batch_urls:
             messagebox.showwarning("Uyarı", "Lütfen bir URL girin veya toplu dosya seçin.")
@@ -305,23 +341,23 @@ class ModernMediumScraperApp(BaseAppClass):
 
         logger = ThreadSafeQueueLogger(self.msg_queue)
         
-        # Thread ile çalıştır
         t = threading.Thread(
             target=self._run_scraping_process,
-            args=(target_input, category, output_format, download_imgs, max_threads, logger),
+            args=(target_input, category, output_format, download_imgs, max_threads, enable_ai, api_key, logger),
             daemon=True
         )
         t.start()
 
-    def _run_scraping_process(self, target_input, category, output_format, download_imgs, max_threads, logger):
+    def _run_scraping_process(self, target_input, category, output_format, download_imgs, max_threads, enable_ai, api_key, logger):
         scraper = MediumScraperCore(logger=logger)
         category_dir = MAKALELER_DIR / category
         category_dir.mkdir(parents=True, exist_ok=True)
 
+        rewriter = DeepSeekRewriter(api_key=api_key, logger=logger) if enable_ai else None
+
         try:
             articles_to_save = []
 
-            # 1. Toplu Dosyadan URL'ler Yüklendiyse
             if self.batch_urls:
                 logger.log(f"{len(self.batch_urls)} adet toplu URL eşzamanlı çekiliyor ({max_threads} iş parçacığı)...")
                 
@@ -335,12 +371,10 @@ class ModernMediumScraperApp(BaseAppClass):
                     progress_callback=on_progress
                 )
 
-            # 2. Tekil Profil veya RSS ise
             elif is_profile_url(target_input):
                 logger.log(f"Profil/RSS beslemesi taranıyor: {target_input}")
                 articles_to_save = scraper.fetch_user_rss(target_input)
 
-            # 3. Tekil Makale URL'si ise
             elif is_article_url(target_input):
                 logger.log(f"Tekil makale indiriliyor: {target_input}")
                 article_data = scraper.fetch_single_article(target_input)
@@ -360,14 +394,12 @@ class ModernMediumScraperApp(BaseAppClass):
                 text_content = article["content_text"]
                 orig_url = article.get("original_url", target_input)
 
-                # Görselleri Yerel Dizine İndir
                 if download_imgs and markdown_content:
                     logger.log(f"[{idx}/{len(articles_to_save)}] Görseller indiriliyor...")
                     markdown_content, img_cnt = localize_markdown_images(markdown_content, category_dir, logger)
                     if img_cnt > 0:
                         logger.log(f"[Görsel] {img_cnt} adet görsel indirildi ve yerelleştirildi.")
 
-                # Dosyaya Kaydet
                 filename = generate_unique_filename(title, orig_url, extension=output_format)
                 file_path = category_dir / filename
 
@@ -386,7 +418,20 @@ class ModernMediumScraperApp(BaseAppClass):
                     f.write(content_to_write)
 
                 total_saved += 1
-                logger.log(f"[KAYDEDİLDİ] {category}/{filename}")
+                logger.log(f"[KAYDEDİLDİ - Orijinal] {category}/{filename}")
+
+                # DeepSeek AI Rewrite & Expansion
+                if enable_ai and rewriter:
+                    try:
+                        rewritten_md = rewriter.rewrite_and_expand_article(markdown_content, metadata)
+                        en_filename = generate_unique_filename(f"{title}_en", orig_url, extension="md")
+                        en_file_path = category_dir / en_filename
+                        with open(en_file_path, "w", encoding="utf-8") as f:
+                            f.write(rewritten_md)
+                        logger.log(f"[KAYDEDİLDİ - DeepSeek AI EN] {category}/{en_filename}")
+                    except Exception as ai_err:
+                        logger.log(f"[HATA - DeepSeek AI] {title}: {ai_err}")
+
                 logger.progress(total_saved / len(articles_to_save))
 
             logger.done(f"İşlem Tamamlandı! Toplam {total_saved} makale '{category}' klasörüne kaydedildi.")
