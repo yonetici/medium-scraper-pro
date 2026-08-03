@@ -8,6 +8,7 @@
     "https://readmedium.com/"
   ],
   "request_timeout": 45,
+  "ai_request_timeout": 150,
   "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   "skip_keywords": [
     "OpenAI",
@@ -24,8 +25,8 @@
     "become a member"
   ],
   "enable_ai_rewrite": false,
-  "ui_language": "TR",
-  "selected_ai_provider": "OpenAI",
+  "ui_language": "EN",
+  "selected_ai_provider": "DeepSeek",
   "ai_provider_keys": {
     "DeepSeek": "",
     "OpenAI": "",
@@ -37,7 +38,7 @@
     "Custom": ""
   },
   "ai_provider_models": {
-    "DeepSeek": "deepseek-chat",
+    "DeepSeek": "deepseek-v4-pro",
     "OpenAI": "gpt-4o-mini",
     "Gemini": "gemini-2.5-flash",
     "OpenRouter": "google/gemini-2.5-flash",

@@ -1,4 +1,5 @@
 import json
+import socket
 import ssl
 import urllib.request
 import urllib.error
@@ -247,9 +248,11 @@ Original Article Body:
 
         ctx = ssl._create_unverified_context()
 
+        # Generous timeout for long technical articles (150s = 2.5 minutes)
+        ai_timeout = self.config.get("ai_request_timeout", 150)
+
         try:
-            timeout = self.config.get("request_timeout", 45)
-            with urllib.request.urlopen(req, context=ctx, timeout=timeout) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=ai_timeout) as response:
                 res_body = response.read().decode("utf-8")
                 res_json = json.loads(res_body)
 
@@ -265,8 +268,14 @@ Original Article Body:
             error_body = e.read().decode("utf-8", errors="ignore")
             parsed_msg = parse_api_error_message(error_body, e.code)
             raise Exception(f"[{self.provider} AI] {parsed_msg}")
+        except (socket.timeout, TimeoutError) as e:
+            raise Exception(f"[{self.provider} AI] Zaman Aşımı (Timeout - {ai_timeout}s): AI sunucusunun yanıt üretmesi çok uzun sürdü ({e}). Lütfen tekrar deneyin veya daha kısa bir makale seçin.")
+        except urllib.error.URLError as e:
+            if "timed out" in str(e).lower():
+                raise Exception(f"[{self.provider} AI] Zaman Aşımı (Timeout - {ai_timeout}s): Sunucu yanıt vermedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.")
+            raise Exception(f"[{self.provider} AI] Bağlantı Hatası: {e}")
         except Exception as e:
-            raise Exception(f"[{self.provider} AI] Bağlantı/İşlem Hatası: {e}")
+            raise Exception(f"[{self.provider} AI] İşlem Hatası: {e}")
 
 
 DeepSeekRewriter = MultiProviderAIRewriter
