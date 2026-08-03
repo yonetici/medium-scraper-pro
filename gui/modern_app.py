@@ -73,15 +73,18 @@ class ModernMediumScraperApp(BaseAppClass):
         self.batch_urls = []
         self.articles_cache = {}
 
-        self.title(self.t("title"))
+        self.tab_key_scraper = "TAB_SCRAPER"
+        self.tab_key_ai = "TAB_AI"
+
         self.geometry("980x820")
         self.minsize(900, 720)
 
         self.setup_ui()
+        self.apply_language()
         self.after(100, self.poll_queue)
 
     def t(self, key: str) -> str:
-        """Helper shortcut to get localized string."""
+        """Localization string helper shortcut."""
         return get_text(key, self.current_lang)
 
     def setup_ui(self):
@@ -92,13 +95,13 @@ class ModernMediumScraperApp(BaseAppClass):
 
         self.app_title_label = ctk.CTkLabel(
             top_bar,
-            text=self.t("title"),
+            text="",
             font=ctk.CTkFont(size=20, weight="bold")
-        ) if HAS_CTK else ctk.Label(top_bar, text=self.t("title"), font=("Arial", 16, "bold"))
+        ) if HAS_CTK else ctk.Label(top_bar, text="", font=("Arial", 16, "bold"))
         self.app_title_label.grid(row=0, column=0, sticky="w")
 
-        lang_label = ctk.CTkLabel(top_bar, text="Dil / Language:", font=ctk.CTkFont(size=12)) if HAS_CTK else ctk.Label(top_bar, text="Language:")
-        lang_label.grid(row=0, column=1, padx=(10, 5), sticky="e")
+        self.lang_hdr_label = ctk.CTkLabel(top_bar, text="Language / Dil:", font=ctk.CTkFont(size=12)) if HAS_CTK else ctk.Label(top_bar, text="Language / Dil:")
+        self.lang_hdr_label.grid(row=0, column=1, padx=(10, 5), sticky="e")
 
         self.lang_var = ctk.StringVar(value=self.current_lang)
         self.lang_btn = ctk.CTkSegmentedButton(
@@ -114,15 +117,15 @@ class ModernMediumScraperApp(BaseAppClass):
             self.tabview = ctk.CTkTabview(self)
             self.tabview.pack(fill="both", expand=True, padx=15, pady=10)
 
-            self.tab_scraper = self.tabview.add(self.t("tab_scraper"))
-            self.tab_ai = self.tabview.add(self.t("tab_ai"))
+            self.tab_scraper = self.tabview.add(self.tab_key_scraper)
+            self.tab_ai = self.tabview.add(self.tab_key_ai)
         else:
             self.notebook = ttk.Notebook(self)
             self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
             self.tab_scraper = ttk.Frame(self.notebook)
             self.tab_ai = ttk.Frame(self.notebook)
-            self.notebook.add(self.tab_scraper, text="Makale İndirici")
-            self.notebook.add(self.tab_ai, text="Multi-AI Editor")
+            self.notebook.add(self.tab_scraper, text=self.tab_key_scraper)
+            self.notebook.add(self.tab_ai, text=self.tab_key_ai)
 
         self.build_scraper_tab()
         self.build_ai_editor_tab()
@@ -135,84 +138,84 @@ class ModernMediumScraperApp(BaseAppClass):
         tab.grid_columnconfigure(0, weight=1)
         tab.grid_rowconfigure(4, weight=1)
 
-        input_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="Girdi")
-        input_frame.grid(row=0, column=0, padx=15, pady=10, sticky="ew")
-        input_frame.grid_columnconfigure(0, weight=1)
+        self.input_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="Input")
+        self.input_frame.grid(row=0, column=0, padx=15, pady=10, sticky="ew")
+        self.input_frame.grid_columnconfigure(0, weight=1)
 
         self.url_label = ctk.CTkLabel(
-            input_frame,
-            text=self.t("url_label"),
+            self.input_frame,
+            text="",
             font=ctk.CTkFont(size=13)
-        ) if HAS_CTK else ctk.Label(input_frame, text=self.t("url_label"))
+        ) if HAS_CTK else ctk.Label(self.input_frame, text="")
         self.url_label.grid(row=0, column=0, padx=15, pady=(10, 2), sticky="w")
 
         self.url_var = ctk.StringVar(value="https://medium.com/@welifiliz")
         self.url_entry = ctk.CTkEntry(
-            input_frame,
+            self.input_frame,
             textvariable=self.url_var,
-            placeholder_text=self.t("url_placeholder")
-        ) if HAS_CTK else ctk.Entry(input_frame, textvariable=self.url_var)
+            placeholder_text=""
+        ) if HAS_CTK else ctk.Entry(self.input_frame, textvariable=self.url_var)
         self.url_entry.grid(row=1, column=0, padx=15, pady=5, sticky="ew")
 
         self.batch_btn = ctk.CTkButton(
-            input_frame,
-            text=self.t("batch_btn"),
+            self.input_frame,
+            text="",
             command=self.select_batch_file,
             width=150
-        ) if HAS_CTK else ctk.Button(input_frame, text=self.t("batch_btn"), command=self.select_batch_file)
+        ) if HAS_CTK else ctk.Button(self.input_frame, text="", command=self.select_batch_file)
         self.batch_btn.grid(row=1, column=1, padx=(0, 15), pady=5)
 
         self.batch_status_label = ctk.CTkLabel(
-            input_frame,
+            self.input_frame,
             text="",
             text_color="gray",
             font=ctk.CTkFont(size=11)
-        ) if HAS_CTK else ctk.Label(input_frame, text="")
+        ) if HAS_CTK else ctk.Label(self.input_frame, text="")
         self.batch_status_label.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 8), sticky="w")
 
-        settings_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="Ayarlar")
-        settings_frame.grid(row=1, column=0, padx=15, pady=5, sticky="ew")
-        settings_frame.grid_columnconfigure((1, 3), weight=1)
+        self.settings_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="Settings")
+        self.settings_frame.grid(row=1, column=0, padx=15, pady=5, sticky="ew")
+        self.settings_frame.grid_columnconfigure((1, 3), weight=1)
 
-        self.cat_label = ctk.CTkLabel(settings_frame, text=self.t("category_label")) if HAS_CTK else ctk.Label(settings_frame, text=self.t("category_label"))
+        self.cat_label = ctk.CTkLabel(self.settings_frame, text="") if HAS_CTK else ctk.Label(self.settings_frame, text="")
         self.cat_label.grid(row=0, column=0, padx=(15, 5), pady=10, sticky="w")
 
         self.category_var = ctk.StringVar(value="genel")
         self.category_combo = ctk.CTkComboBox(
-            settings_frame,
+            self.settings_frame,
             variable=self.category_var,
             values=self.get_local_categories()
-        ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.category_var)
+        ) if HAS_CTK else ctk.Entry(self.settings_frame, textvariable=self.category_var)
         self.category_combo.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
 
-        self.fmt_label = ctk.CTkLabel(settings_frame, text=self.t("format_label")) if HAS_CTK else ctk.Label(settings_frame, text=self.t("format_label"))
+        self.fmt_label = ctk.CTkLabel(self.settings_frame, text="") if HAS_CTK else ctk.Label(self.settings_frame, text="")
         self.fmt_label.grid(row=0, column=2, padx=(15, 5), pady=10, sticky="w")
 
         self.format_var = ctk.StringVar(value="md")
         self.format_combo = ctk.CTkOptionMenu(
-            settings_frame,
+            self.settings_frame,
             variable=self.format_var,
             values=["md", "txt", "json"]
-        ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.format_var)
+        ) if HAS_CTK else ctk.Entry(self.settings_frame, textvariable=self.format_var)
         self.format_combo.grid(row=0, column=3, padx=(5, 15), pady=10, sticky="ew")
 
         self.download_images_var = ctk.BooleanVar(value=self.config_data.get("download_images", False))
         self.img_switch = ctk.CTkSwitch(
-            settings_frame,
-            text=self.t("download_imgs"),
+            self.settings_frame,
+            text="",
             variable=self.download_images_var
-        ) if HAS_CTK else ctk.Checkbutton(settings_frame, text=self.t("download_imgs"), variable=self.download_images_var)
+        ) if HAS_CTK else ctk.Checkbutton(self.settings_frame, text="", variable=self.download_images_var)
         self.img_switch.grid(row=1, column=0, columnspan=2, padx=15, pady=(0, 10), sticky="w")
 
-        self.threads_label = ctk.CTkLabel(settings_frame, text=self.t("threads_label")) if HAS_CTK else ctk.Label(settings_frame, text=self.t("threads_label"))
+        self.threads_label = ctk.CTkLabel(self.settings_frame, text="") if HAS_CTK else ctk.Label(self.settings_frame, text="")
         self.threads_label.grid(row=1, column=2, padx=(15, 5), pady=(0, 10), sticky="w")
 
         self.threads_var = ctk.StringVar(value=str(self.config_data.get("max_concurrent_threads", 5)))
         self.threads_combo = ctk.CTkOptionMenu(
-            settings_frame,
+            self.settings_frame,
             variable=self.threads_var,
             values=["1", "2", "3", "5", "8", "10"]
-        ) if HAS_CTK else ctk.Entry(settings_frame, textvariable=self.threads_var)
+        ) if HAS_CTK else ctk.Entry(self.settings_frame, textvariable=self.threads_var)
         self.threads_combo.grid(row=1, column=3, padx=(5, 15), pady=(0, 10), sticky="ew")
 
         action_frame = ctk.CTkFrame(tab, fg_color="transparent") if HAS_CTK else ctk.Frame(tab)
@@ -221,21 +224,21 @@ class ModernMediumScraperApp(BaseAppClass):
 
         self.fetch_btn = ctk.CTkButton(
             action_frame,
-            text=self.t("fetch_btn"),
+            text="",
             font=ctk.CTkFont(size=15, weight="bold"),
             fg_color="#27ae60",
             hover_color="#219150",
             height=42,
             command=self.start_fetch
-        ) if HAS_CTK else ctk.Button(action_frame, text=self.t("fetch_btn"), command=self.start_fetch)
+        ) if HAS_CTK else ctk.Button(action_frame, text="", command=self.start_fetch)
         self.fetch_btn.grid(row=0, column=0, sticky="ew")
 
         self.open_folder_btn = ctk.CTkButton(
             action_frame,
-            text=self.t("open_folder"),
+            text="",
             height=42,
             command=self.open_articles_folder
-        ) if HAS_CTK else ctk.Button(action_frame, text=self.t("open_folder"), command=self.open_articles_folder)
+        ) if HAS_CTK else ctk.Button(action_frame, text="", command=self.open_articles_folder)
         self.open_folder_btn.grid(row=0, column=1, padx=(10, 0))
 
         self.progress_bar = ctk.CTkProgressBar(action_frame) if HAS_CTK else None
@@ -243,17 +246,17 @@ class ModernMediumScraperApp(BaseAppClass):
             self.progress_bar.grid(row=1, column=0, columnspan=2, pady=(10, 0), sticky="ew")
             self.progress_bar.set(0)
 
-        log_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("download_log"))
-        log_frame.grid(row=4, column=0, padx=15, pady=(5, 15), sticky="nsew")
-        log_frame.grid_columnconfigure(0, weight=1)
-        log_frame.grid_rowconfigure(0, weight=1)
+        self.log_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
+        self.log_frame.grid(row=4, column=0, padx=15, pady=(5, 15), sticky="nsew")
+        self.log_frame.grid_columnconfigure(0, weight=1)
+        self.log_frame.grid_rowconfigure(0, weight=1)
 
         if HAS_CTK:
-            self.log_area = ctk.CTkTextbox(log_frame, font=ctk.CTkFont(family="Courier", size=12))
+            self.log_area = ctk.CTkTextbox(self.log_frame, font=ctk.CTkFont(family="Courier", size=12))
             self.log_area.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         else:
             import tkinter.scrolledtext as st
-            self.log_area = st.ScrolledText(log_frame, wrap="word", height=12)
+            self.log_area = st.ScrolledText(self.log_frame, wrap="word", height=12)
             self.log_area.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
     # ---------------------------------------------------------------------------
@@ -264,123 +267,123 @@ class ModernMediumScraperApp(BaseAppClass):
         tab.grid_columnconfigure((0, 1), weight=1)
         tab.grid_rowconfigure(2, weight=1)
 
-        top_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("ai_settings_title"))
-        top_frame.grid(row=0, column=0, columnspan=2, padx=15, pady=10, sticky="ew")
-        top_frame.grid_columnconfigure((1, 3), weight=1)
+        self.top_ai_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
+        self.top_ai_frame.grid(row=0, column=0, columnspan=2, padx=15, pady=10, sticky="ew")
+        self.top_ai_frame.grid_columnconfigure((1, 3), weight=1)
 
-        self.ai_service_label = ctk.CTkLabel(top_frame, text=self.t("ai_service"), font=ctk.CTkFont(weight="bold")) if HAS_CTK else ctk.Label(top_frame, text=self.t("ai_service"))
+        self.ai_service_label = ctk.CTkLabel(self.top_ai_frame, text="", font=ctk.CTkFont(weight="bold")) if HAS_CTK else ctk.Label(self.top_ai_frame, text="")
         self.ai_service_label.grid(row=0, column=0, padx=(15, 5), pady=10, sticky="w")
 
         selected_prov = self.config_data.get("selected_ai_provider", "DeepSeek")
         self.ai_provider_var = ctk.StringVar(value=selected_prov)
         self.ai_provider_combo = ctk.CTkOptionMenu(
-            top_frame,
+            self.top_ai_frame,
             variable=self.ai_provider_var,
             values=["DeepSeek", "OpenAI", "Gemini", "OpenRouter", "Kimi", "Grok", "Qwen", "Custom"],
             command=self.on_ai_provider_changed
-        ) if HAS_CTK else ctk.Entry(top_frame, textvariable=self.ai_provider_var)
+        ) if HAS_CTK else ctk.Entry(self.top_ai_frame, textvariable=self.ai_provider_var)
         self.ai_provider_combo.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
 
-        self.model_label = ctk.CTkLabel(top_frame, text=self.t("model_label")) if HAS_CTK else ctk.Label(top_frame, text=self.t("model_label"))
+        self.model_label = ctk.CTkLabel(self.top_ai_frame, text="") if HAS_CTK else ctk.Label(self.top_ai_frame, text="")
         self.model_label.grid(row=0, column=2, padx=(15, 5), pady=10, sticky="w")
 
         init_model = self.config_data.get("ai_provider_models", {}).get(selected_prov, "deepseek-chat")
         self.ai_model_var = ctk.StringVar(value=init_model)
         self.ai_model_entry = ctk.CTkEntry(
-            top_frame,
+            self.top_ai_frame,
             textvariable=self.ai_model_var,
             placeholder_text="gpt-4o / deepseek-chat / gemini-2.5-flash"
-        ) if HAS_CTK else ctk.Entry(top_frame, textvariable=self.ai_model_var)
+        ) if HAS_CTK else ctk.Entry(self.top_ai_frame, textvariable=self.ai_model_var)
         self.ai_model_entry.grid(row=0, column=3, padx=(5, 15), pady=10, sticky="ew")
 
-        self.api_key_label = ctk.CTkLabel(top_frame, text=self.t("api_key")) if HAS_CTK else ctk.Label(top_frame, text=self.t("api_key"))
+        self.api_key_label = ctk.CTkLabel(self.top_ai_frame, text="") if HAS_CTK else ctk.Label(self.top_ai_frame, text="")
         self.api_key_label.grid(row=1, column=0, padx=(15, 5), pady=(0, 10), sticky="w")
 
         init_key = self.config_data.get("ai_provider_keys", {}).get(selected_prov, "")
         self.ai_api_key_var = ctk.StringVar(value=init_key)
         self.ai_api_key_entry = ctk.CTkEntry(
-            top_frame,
+            self.top_ai_frame,
             textvariable=self.ai_api_key_var,
             placeholder_text="sk-...",
             show="*"
-        ) if HAS_CTK else ctk.Entry(top_frame, textvariable=self.ai_api_key_var, show="*")
+        ) if HAS_CTK else ctk.Entry(self.top_ai_frame, textvariable=self.ai_api_key_var, show="*")
         self.ai_api_key_entry.grid(row=1, column=1, columnspan=2, padx=5, pady=(0, 10), sticky="ew")
 
         self.save_key_btn = ctk.CTkButton(
-            top_frame,
-            text=self.t("save_settings"),
+            self.top_ai_frame,
+            text="",
             width=120,
             command=self.save_ai_key_click
-        ) if HAS_CTK else ctk.Button(top_frame, text=self.t("save_settings"), command=self.save_ai_key_click)
+        ) if HAS_CTK else ctk.Button(self.top_ai_frame, text="", command=self.save_ai_key_click)
         self.save_key_btn.grid(row=1, column=3, padx=(5, 15), pady=(0, 10), sticky="ew")
 
-        left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("downloaded_articles_title"))
-        left_frame.grid(row=1, column=0, padx=(15, 5), pady=5, sticky="nsew")
-        left_frame.grid_columnconfigure(1, weight=1)
-        left_frame.grid_rowconfigure(2, weight=1)
+        self.left_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
+        self.left_frame.grid(row=1, column=0, padx=(15, 5), pady=5, sticky="nsew")
+        self.left_frame.grid_columnconfigure(1, weight=1)
+        self.left_frame.grid_rowconfigure(2, weight=1)
 
-        self.ai_cat_sel_label = ctk.CTkLabel(left_frame, text=self.t("category")) if HAS_CTK else ctk.Label(left_frame, text=self.t("category"))
+        self.ai_cat_sel_label = ctk.CTkLabel(self.left_frame, text="") if HAS_CTK else ctk.Label(self.left_frame, text="")
         self.ai_cat_sel_label.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="w")
 
         self.ai_category_var = ctk.StringVar(value="genel")
         self.ai_category_combo = ctk.CTkComboBox(
-            left_frame,
+            self.left_frame,
             variable=self.ai_category_var,
             values=self.get_local_categories(),
             command=self.on_ai_category_change
-        ) if HAS_CTK else ctk.Entry(left_frame, textvariable=self.ai_category_var)
+        ) if HAS_CTK else ctk.Entry(self.left_frame, textvariable=self.ai_category_var)
         self.ai_category_combo.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
 
         self.refresh_files_btn = ctk.CTkButton(
-            left_frame,
-            text=self.t("refresh_btn"),
+            self.left_frame,
+            text="",
             width=70,
             command=self.refresh_ai_article_list
-        ) if HAS_CTK else ctk.Button(left_frame, text=self.t("refresh_btn"), command=self.refresh_ai_article_list)
+        ) if HAS_CTK else ctk.Button(self.left_frame, text="", command=self.refresh_ai_article_list)
         self.refresh_files_btn.grid(row=0, column=2, padx=(5, 10), pady=8)
 
-        self.ai_art_sel_label = ctk.CTkLabel(left_frame, text=self.t("article_label")) if HAS_CTK else ctk.Label(left_frame, text=self.t("article_label"))
+        self.ai_art_sel_label = ctk.CTkLabel(self.left_frame, text="") if HAS_CTK else ctk.Label(self.left_frame, text="")
         self.ai_art_sel_label.grid(row=1, column=0, padx=(10, 5), pady=(0, 8), sticky="w")
 
-        self.ai_article_var = ctk.StringVar(value="Select article...")
+        self.ai_article_var = ctk.StringVar(value="")
         self.ai_article_combo = ctk.CTkOptionMenu(
-            left_frame,
+            self.left_frame,
             variable=self.ai_article_var,
-            values=["(No articles found)"],
+            values=["..."],
             command=self.on_ai_article_selected
-        ) if HAS_CTK else ctk.Entry(left_frame, textvariable=self.ai_article_var)
+        ) if HAS_CTK else ctk.Entry(self.left_frame, textvariable=self.ai_article_var)
         self.ai_article_combo.grid(row=1, column=1, columnspan=2, padx=(5, 10), pady=(0, 8), sticky="ew")
 
         if HAS_CTK:
-            self.ai_orig_preview = ctk.CTkTextbox(left_frame, font=ctk.CTkFont(size=12))
+            self.ai_orig_preview = ctk.CTkTextbox(self.left_frame, font=ctk.CTkFont(size=12))
             self.ai_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
         else:
             import tkinter.scrolledtext as st
-            self.ai_orig_preview = st.ScrolledText(left_frame, wrap="word", height=15)
+            self.ai_orig_preview = st.ScrolledText(self.left_frame, wrap="word", height=15)
             self.ai_orig_preview.grid(row=2, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
 
-        right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text=self.t("ai_output_title"))
-        right_frame.grid(row=1, column=1, padx=(5, 15), pady=5, sticky="nsew")
-        right_frame.grid_columnconfigure(0, weight=1)
-        right_frame.grid_rowconfigure(1, weight=1)
+        self.right_frame = ctk.CTkFrame(tab) if HAS_CTK else ctk.LabelFrame(tab, text="")
+        self.right_frame.grid(row=1, column=1, padx=(5, 15), pady=5, sticky="nsew")
+        self.right_frame.grid_columnconfigure(0, weight=1)
+        self.right_frame.grid_rowconfigure(1, weight=1)
 
         self.ai_convert_btn = ctk.CTkButton(
-            right_frame,
-            text=self.t("convert_btn"),
+            self.right_frame,
+            text="",
             font=ctk.CTkFont(size=13, weight="bold"),
             fg_color="#8e44ad",
             hover_color="#732d91",
             height=38,
             command=self.start_ai_rewrite_single
-        ) if HAS_CTK else ctk.Button(right_frame, text=self.t("convert_btn"), command=self.start_ai_rewrite_single)
+        ) if HAS_CTK else ctk.Button(self.right_frame, text="", command=self.start_ai_rewrite_single)
         self.ai_convert_btn.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
 
         if HAS_CTK:
-            self.ai_output_preview = ctk.CTkTextbox(right_frame, font=ctk.CTkFont(size=12))
+            self.ai_output_preview = ctk.CTkTextbox(self.right_frame, font=ctk.CTkFont(size=12))
             self.ai_output_preview.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
         else:
             import tkinter.scrolledtext as st
-            self.ai_output_preview = st.ScrolledText(right_frame, wrap="word", height=15)
+            self.ai_output_preview = st.ScrolledText(self.right_frame, wrap="word", height=15)
             self.ai_output_preview.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
 
         self.refresh_ai_article_list()
@@ -400,12 +403,23 @@ class ModernMediumScraperApp(BaseAppClass):
 
     def apply_language(self):
         self.title(self.t("title"))
+
         if HAS_CTK:
             self.app_title_label.configure(text=self.t("title"))
-            # Tabs
-            self.tabview._segmented_button._buttons_dict["📥 Makale İndirici" if "📥" in self.tabview._segmented_button._buttons_dict else self.t("tab_scraper")].configure(text=self.t("tab_scraper"))
-            self.tabview._segmented_button._buttons_dict["🤖 Multi-AI Editor & İngilizce Yeniden Yazım" if "🤖" in self.tabview._segmented_button._buttons_dict else self.t("tab_ai")].configure(text=self.t("tab_ai"))
+            # Update CTkTabview tab header button texts cleanly
+            try:
+                self.tabview._segmented_button._buttons_dict[self.tab_key_scraper].configure(text=self.t("tab_scraper"))
+                self.tabview._segmented_button._buttons_dict[self.tab_key_ai].configure(text=self.t("tab_ai"))
+            except Exception:
+                pass
+        else:
+            try:
+                self.notebook.tab(0, text=self.t("tab_scraper"))
+                self.notebook.tab(1, text=self.t("tab_ai"))
+            except Exception:
+                pass
 
+        # Scraper Tab Labels & Controls
         self.url_label.configure(text=self.t("url_label"))
         self.url_entry.configure(placeholder_text=self.t("url_placeholder"))
         self.batch_btn.configure(text=self.t("batch_btn"))
@@ -416,6 +430,15 @@ class ModernMediumScraperApp(BaseAppClass):
         self.fetch_btn.configure(text=self.t("fetch_btn"))
         self.open_folder_btn.configure(text=self.t("open_folder"))
 
+        if not HAS_CTK:
+            self.input_frame.configure(text=self.t("url_label"))
+            self.settings_frame.configure(text=self.t("category_label"))
+            self.log_frame.configure(text=self.t("download_log"))
+            self.top_ai_frame.configure(text=self.t("ai_settings_title"))
+            self.left_frame.configure(text=self.t("downloaded_articles_title"))
+            self.right_frame.configure(text=self.t("ai_output_title"))
+
+        # AI Tab Labels & Controls
         self.ai_service_label.configure(text=self.t("ai_service"))
         self.model_label.configure(text=self.t("model_label"))
         self.api_key_label.configure(text=self.t("api_key"))
@@ -424,6 +447,8 @@ class ModernMediumScraperApp(BaseAppClass):
         self.refresh_files_btn.configure(text=self.t("refresh_btn"))
         self.ai_art_sel_label.configure(text=self.t("article_label"))
         self.ai_convert_btn.configure(text=self.t("convert_btn"))
+
+        self.refresh_ai_article_list()
 
     # ---------------------------------------------------------------------------
     # MANTIKSAL İŞLEVLER
@@ -493,7 +518,7 @@ class ModernMediumScraperApp(BaseAppClass):
         model_val = self.ai_model_var.get().strip()
 
         if not key_val:
-            messagebox.showwarning("Uyarı", self.t("key_missing_warn").format(provider=provider))
+            messagebox.showwarning("Uyarı / Warning", self.t("key_missing_warn").format(provider=provider))
             return
 
         self.config_data["selected_ai_provider"] = provider
@@ -508,9 +533,9 @@ class ModernMediumScraperApp(BaseAppClass):
         try:
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 json.dump(self.config_data, f, ensure_ascii=False, indent=2)
-            messagebox.showinfo("Başarılı", self.t("key_saved_msg").format(provider=provider))
+            messagebox.showinfo("Başarılı / Success", self.t("key_saved_msg").format(provider=provider))
         except Exception as e:
-            messagebox.showerror("Hata", f"Kaydedilemedi: {e}")
+            messagebox.showerror("Hata / Error", f"Kaydedilemedi / Error saving: {e}")
 
     def start_ai_rewrite_single(self):
         provider = self.ai_provider_var.get().strip()
@@ -569,16 +594,16 @@ class ModernMediumScraperApp(BaseAppClass):
                     self.ai_output_preview.delete("1.0", "end")
                     self.ai_output_preview.insert("1.0", f"--- SAVED ({provider}): {cat}/{en_filename} ---\n\n" + rewritten_md)
                     self.ai_convert_btn.configure(state="normal")
-                    messagebox.showinfo("Başarılı", self.t("ai_saved_msg").format(provider=provider, filename=f"{cat}/{en_filename}"))
+                    messagebox.showinfo("Başarılı / Success", self.t("ai_saved_msg").format(provider=provider, filename=f"{cat}/{en_filename}"))
 
                 self.after(0, _update_ui_success)
 
             except Exception as err:
                 def _update_ui_error():
                     self.ai_output_preview.delete("1.0", "end")
-                    self.ai_output_preview.insert("1.0", f"[HATA] {provider} AI İşlem Başarısız:\n{err}")
+                    self.ai_output_preview.insert("1.0", f"[HATA] {provider} AI İşlem Başarısız / Failed:\n{err}")
                     self.ai_convert_btn.configure(state="normal")
-                    messagebox.showerror("Hata", str(err))
+                    messagebox.showerror("Hata / Error", str(err))
 
                 self.after(0, _update_ui_error)
 
@@ -590,7 +615,7 @@ class ModernMediumScraperApp(BaseAppClass):
     # ---------------------------------------------------------------------------
     def select_batch_file(self):
         file_path = filedialog.askopenfilename(
-            title="Toplu URL Dosyası Seç",
+            title="Toplu URL Dosyası Seç / Select Batch File",
             filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")]
         )
         if file_path:
@@ -599,11 +624,11 @@ class ModernMediumScraperApp(BaseAppClass):
                     lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
                 self.batch_urls = lines
                 self.batch_status_label.configure(
-                    text=f"Seçilen Dosya: {Path(file_path).name} ({len(lines)} bağlantı yüklendi)"
+                    text=f"Seçilen Dosya / File: {Path(file_path).name} ({len(lines)} URLs)"
                 )
-                self.log_direct(f"[BİLGİ] {len(lines)} adet URL {Path(file_path).name} dosyasından yüklendi.")
+                self.log_direct(f"[BİLGİ] {len(lines)} URLs loaded from {Path(file_path).name}.")
             except Exception as e:
-                messagebox.showerror("Hata", f"Toplu dosya okunamadı: {e}")
+                messagebox.showerror("Hata / Error", f"Dosya okunamadı: {e}")
 
     def log_direct(self, message: str):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -627,7 +652,7 @@ class ModernMediumScraperApp(BaseAppClass):
                     self.refresh_ai_article_list()
                 elif msg_type == "error":
                     self.fetch_btn.configure(state="normal")
-                    messagebox.showerror("Hata", payload)
+                    messagebox.showerror("Hata / Error", payload)
         except queue.Empty:
             pass
         self.after(100, self.poll_queue)
@@ -649,7 +674,7 @@ class ModernMediumScraperApp(BaseAppClass):
         max_threads = int(self.threads_var.get() or 5)
 
         if not target_input and not self.batch_urls:
-            messagebox.showwarning("Uyarı", self.t("select_file_warn"))
+            messagebox.showwarning("Uyarı / Warning", self.t("select_file_warn"))
             return
 
         self.fetch_btn.configure(state="disabled")
